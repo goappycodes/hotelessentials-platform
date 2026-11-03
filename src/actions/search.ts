@@ -2,6 +2,8 @@
 
 import { z } from "zod"
 
+import { searchItems } from "@/features/items/search"
+import { searchPriceLists } from "@/features/price-lists/search"
 import { searchUsers } from "@/features/users/search"
 import { hasAccess, type AccessScope } from "@/lib/permissions"
 import { fetchSession } from "@/lib/session"
@@ -17,8 +19,8 @@ type SearchProvider = {
 // Each module plugs in its search here once its table exists.
 const PROVIDERS: Record<SearchScope, SearchProvider> = {
   users: { access: "admin", search: searchUsers },
-  items: { access: "items" },
-  discounts: { access: "discounts" },
+  items: { access: "items", search: searchItems },
+  price_lists: { access: "price_lists", search: searchPriceLists },
   quotations: { access: "quotations" },
   sales_orders: { access: "sales_orders" },
   despatch: { access: "despatch" },

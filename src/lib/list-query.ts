@@ -127,3 +127,28 @@ export function toListPage<T>(rows: T[], query: ListQuery): ListPage<T> {
     hasNextPage: rows.length > query.perPage,
   }
 }
+
+// "?sort=name&q=range" from a page's search params, with `changes` applied (null removes a
+// param), so links between a list and an opened record keep the same view. Empty when
+// there are none.
+export function toSearchString(
+  params: ListSearchParams,
+  changes: Record<string, string | null> = {}
+) {
+  const search = new URLSearchParams()
+  if (params instanceof URLSearchParams) {
+    params.forEach((value, key) => search.append(key, value))
+  } else {
+    for (const [key, value] of Object.entries(params)) {
+      for (const entry of Array.isArray(value) ? value : value ? [value] : []) {
+        search.append(key, entry)
+      }
+    }
+  }
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === null) search.delete(key)
+    else search.set(key, value)
+  }
+  const text = search.toString()
+  return text ? `?${text}` : ""
+}

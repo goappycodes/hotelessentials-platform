@@ -110,7 +110,8 @@ export async function updateUser(
   if (banError) {
     return {
       success: false,
-      error: "Changes saved, but sign-in access could not be updated. Please save again.",
+      error:
+        "The user was updated, but sign-in access could not be changed. Please update again.",
     }
   }
 

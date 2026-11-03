@@ -2,8 +2,9 @@
 
 Business management platform for a hotel supply company. This repository holds the
 foundation: authentication, users with roles and per-module permissions, user
-management, and the dashboard shell with placeholder pages for the Phase 1 modules
-(Items, Discounts, Quotations, Sales Orders, Despatch, Reports).
+management, tax settings, the Items and Price Lists modules, and the dashboard shell with
+placeholder pages for the remaining Phase 1 modules (Quotations, Sales Orders, Despatch,
+Reports).
 
 ## Tech stack
 
@@ -106,6 +107,12 @@ They create:
 - Helper functions in a non-exposed `private` schema used by RLS policies:
   `current_user_role()`, `is_active_user()`, `is_admin()` and
   `has_permission(module, action)`.
+- Items: `items`, `hsn_codes`, `item_images` and a private `item-images` Storage bucket
+  (JPG, PNG, WebP or GIF up to 5 MB, read through short-lived signed URLs).
+- `tax_rates`: intra-state (CGST + SGST) and inter-state (IGST) taxes, starting with the
+  GST 0/5/12/18/28% slabs. Items reference their two taxes.
+- Price lists: `price_lists`, `price_list_items`, and `public.save_price_list(...)`, which
+  saves a list and its item rates in one transaction.
 
 ### 2. Configure authentication
 
@@ -279,23 +286,62 @@ the total row count. It runs only when the user clicks **Total Count: View**, so
 tables are not counted on every page load. Render the component that awaits
 `searchParams` inside `<Suspense>` with a skeleton, so the page header stays instant.
 
+## Items
+
+`/items` lists items with a thumbnail, SKU, type, HSN code, rates and status (filters: type,
+status; header search: name, SKU or HSN code, through the `item_list` view that joins each
+item's HSN code). Clicking an item opens it on the same page
+(`/items?item=<id>`): the list narrows to the left and the item shows on the right with
+Overview, Transactions and History tabs. Its header has Edit (`/items/<id>/edit`), Adjust
+Stock (disabled until there is an Inventory module) and More: Clone Item (opens New Item
+prefilled, SKU cleared), Mark as Inactive/Active, Delete (with confirmation) and Lock item.
+A locked item can't be edited or deleted until an owner or admin unlocks it; the database
+enforces this.
+
+The item form follows Zoho:
+
+- **Details**: name, type (goods or service), unit (pick or type your own), SKU (unique,
+  ignoring case), HSN code and tax preference. Goods need an HSN code; new HSN codes can be
+  added from the search box ("Add HSN code …").
+- **Images**: up to 5 per item, dragged in or browsed. New images upload when the item is
+  saved; removing a saved image deletes it straight away.
+- **Sales / purchase information**: selling and cost price, account, description,
+  preferred vendor. Either side can be switched off.
+- **Default tax rates**: taxable items pick an intra-state tax and an inter-state tax from
+  Settings → Taxes.
+
+An item used in a price list cannot be deleted; mark it inactive instead.
+
+## Taxes
+
+Owners and admins manage taxes in **Settings → Taxes**. An intra-state tax is split into
+CGST and SGST (e.g. GST18 = CGST 9% + SGST 9%); an inter-state tax is IGST (e.g. IGST18).
+Items keep a reference to their taxes, so editing a tax applies to every item using it.
+A tax in use cannot be deleted or change between intra- and inter-state; deactivate it to
+stop it being picked for new items.
+
+## Price lists
+
+`/price-lists` holds sales or purchase price lists of two kinds:
+
+- **All Items**: a markup or markdown percentage on every item's selling (or cost) price,
+  with optional rounding: nearest whole number, .99, .50, .49 or a number of decimal
+  places. The form shows a worked example; `applyPriceAdjustment` in
+  `src/lib/price-lists.ts` does the calculation for other modules to reuse.
+- **Individual Items**: a custom rate per item. Items left blank keep their normal rate.
+
 ## Next steps for modules
 
-Every module table (items, discounts, quotations, sales orders, despatches) should enable
-RLS with the permission helper, using the module names from `APP_MODULES`:
+Each new module table (quotations, sales orders, despatches) should enable RLS with the
+permission helper, using the module names from `APP_MODULES`, as the items and price list
+tables do (see `supabase/migrations/20261103030000_items_and_price_lists.sql`):
 
 ```sql
-alter table public.items enable row level security;
-
-create policy "View items" on public.items for select to authenticated
-  using (private.has_permission('items', 'view'));
-create policy "Create items" on public.items for insert to authenticated
-  with check (private.has_permission('items', 'create'));
-create policy "Edit items" on public.items for update to authenticated
-  using (private.has_permission('items', 'edit'));
-create policy "Delete items" on public.items for delete to authenticated
-  using (private.has_permission('items', 'delete'));
+create policy "View quotations" on public.quotations for select to authenticated
+  using (private.has_permission('quotations', 'view'));
+create policy "Create quotations" on public.quotations for insert to authenticated
+  with check (private.has_permission('quotations', 'create'));
 ```
 
-Planned module dependencies: Items → Discounts, Items/Customers → Quotations →
-Sales Orders → Despatch, and Reports reading from all of them.
+Planned module dependencies: Items/Price Lists/Customers → Quotations → Sales Orders →
+Despatch, and Reports reading from all of them.

@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
             Run your hotel supply business in one place.
           </h2>
           <p className="text-sidebar-foreground">
-            Items, discounts, quotations, sales orders, despatch and reporting
+            Items, price lists, quotations, sales orders, despatch and reporting
             for your whole team.
           </p>
         </div>

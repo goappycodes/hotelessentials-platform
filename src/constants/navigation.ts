@@ -3,6 +3,8 @@ import {
   ChartColumn,
   ClipboardList,
   FileText,
+  Percent,
+  Settings,
   House,
   Package,
   ShoppingCart,
@@ -43,16 +45,16 @@ export const MODULE_NAV_ITEMS = {
     description: "Manage your product catalogue, units and pricing.",
     create: { href: ROUTES.itemsAdd, title: "New Item" },
     access: "items",
-    search: { placeholder: "Search items", scope: "items" },
+    search: { placeholder: "Search items by name, SKU or HSN code", scope: "items" },
   },
-  discounts: {
-    title: "Price List",
-    href: ROUTES.discounts,
+  priceLists: {
+    title: "Price Lists",
+    href: ROUTES.priceLists,
     icon: BadgePercent,
-    description: "Configure item and customer discount rules.",
-    create: { href: ROUTES.discountsAdd, title: "New Discount" },
-    access: "discounts",
-    search: { placeholder: "Search discounts", scope: "discounts" },
+    description: "Manage item prices and customer-specific rates.",
+    create: { href: ROUTES.priceListsAdd, title: "New Price List" },
+    access: "price_lists",
+    search: { placeholder: "Search price lists", scope: "price_lists" },
   },
   quotations: {
     title: "Quotations",
@@ -97,6 +99,14 @@ export const MODULE_NAV_ITEMS = {
     access: "admin",
     search: { placeholder: "Search users by name, email or phone", scope: "users" },
   },
+  taxes: {
+    title: "Taxes",
+    href: ROUTES.taxes,
+    icon: Percent,
+    description: "Set the CGST, SGST and IGST rates that items use.",
+    create: { href: ROUTES.taxesAdd, title: "New Tax" },
+    access: "admin",
+  },
 } satisfies Record<string, NavItem>
 
 export type NavGroup = {
@@ -116,7 +126,7 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
   {
     title: "Items",
     icon: Package,
-    items: [MODULE_NAV_ITEMS.items, MODULE_NAV_ITEMS.discounts],
+    items: [MODULE_NAV_ITEMS.items, MODULE_NAV_ITEMS.priceLists],
   },
   {
     title: "Sales",
@@ -128,7 +138,11 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
     ],
   },
   MODULE_NAV_ITEMS.reports,
-  MODULE_NAV_ITEMS.users,
+  {
+    title: "Settings",
+    icon: Settings,
+    items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes],
+  },
 ]
 
 // Every page in the sidebar, flattened, with its group's title.

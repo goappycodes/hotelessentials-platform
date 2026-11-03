@@ -12,6 +12,258 @@ export type Database = {
   }
   public: {
     Tables: {
+      hsn_codes: {
+        Row: {
+          id: string
+          code: string
+          description: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          description: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          description?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      item_images: {
+        Row: {
+          id: string
+          item_id: string
+          storage_path: string
+          file_name: string
+          content_type: string | null
+          file_size: number | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          storage_path: string
+          file_name: string
+          content_type?: string | null
+          file_size?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          storage_path?: string
+          file_name?: string
+          content_type?: string | null
+          file_size?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_images_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      items: {
+        Row: {
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["item_type"]
+          unit: string | null
+          sku: string | null
+          hsn_code_id: string | null
+          tax_preference: Database["public"]["Enums"]["tax_preference"]
+          sales_enabled: boolean
+          selling_price: number
+          sales_account: string
+          sales_description: string | null
+          purchase_enabled: boolean
+          cost_price: number
+          purchase_account: string
+          purchase_description: string | null
+          preferred_vendor: string | null
+          intra_state_tax_id: string | null
+          inter_state_tax_id: string | null
+          track_inventory: boolean
+          is_locked: boolean
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          type?: Database["public"]["Enums"]["item_type"]
+          unit?: string | null
+          sku?: string | null
+          hsn_code_id?: string | null
+          tax_preference?: Database["public"]["Enums"]["tax_preference"]
+          sales_enabled?: boolean
+          selling_price?: number
+          sales_account?: string
+          sales_description?: string | null
+          purchase_enabled?: boolean
+          cost_price?: number
+          purchase_account?: string
+          purchase_description?: string | null
+          preferred_vendor?: string | null
+          intra_state_tax_id?: string | null
+          inter_state_tax_id?: string | null
+          track_inventory?: boolean
+          is_locked?: boolean
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["item_type"]
+          unit?: string | null
+          sku?: string | null
+          hsn_code_id?: string | null
+          tax_preference?: Database["public"]["Enums"]["tax_preference"]
+          sales_enabled?: boolean
+          selling_price?: number
+          sales_account?: string
+          sales_description?: string | null
+          purchase_enabled?: boolean
+          cost_price?: number
+          purchase_account?: string
+          purchase_description?: string | null
+          preferred_vendor?: string | null
+          intra_state_tax_id?: string | null
+          inter_state_tax_id?: string | null
+          track_inventory?: boolean
+          is_locked?: boolean
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_hsn_code_id_fkey"
+            columns: ["hsn_code_id"]
+            isOneToOne: false
+            referencedRelation: "hsn_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_intra_state_tax_id_fkey"
+            columns: ["intra_state_tax_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_inter_state_tax_id_fkey"
+            columns: ["inter_state_tax_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_list_items: {
+        Row: {
+          id: string
+          price_list_id: string
+          item_id: string
+          rate: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          price_list_id: string
+          item_id: string
+          rate?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          price_list_id?: string
+          item_id?: string
+          rate?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_list_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_list_items_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_lists: {
+        Row: {
+          id: string
+          name: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          price_list_type: Database["public"]["Enums"]["price_list_type"]
+          description: string | null
+          percentage_type: Database["public"]["Enums"]["percentage_type"] | null
+          percentage_value: number | null
+          round_off_to: Database["public"]["Enums"]["round_off_type"]
+          decimal_places: number | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          price_list_type?: Database["public"]["Enums"]["price_list_type"]
+          description?: string | null
+          percentage_type?: Database["public"]["Enums"]["percentage_type"] | null
+          percentage_value?: number | null
+          round_off_to?: Database["public"]["Enums"]["round_off_type"]
+          decimal_places?: number | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          price_list_type?: Database["public"]["Enums"]["price_list_type"]
+          description?: string | null
+          percentage_type?: Database["public"]["Enums"]["percentage_type"] | null
+          percentage_value?: number | null
+          round_off_to?: Database["public"]["Enums"]["round_off_type"]
+          decimal_places?: number | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -47,6 +299,43 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tax_rates: {
+        Row: {
+          id: string
+          name: string
+          tax_scope: Database["public"]["Enums"]["tax_scope"]
+          cgst_rate: number | null
+          sgst_rate: number | null
+          igst_rate: number | null
+          rate: number | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          tax_scope: Database["public"]["Enums"]["tax_scope"]
+          cgst_rate?: number | null
+          sgst_rate?: number | null
+          igst_rate?: number | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          tax_scope?: Database["public"]["Enums"]["tax_scope"]
+          cgst_rate?: number | null
+          sgst_rate?: number | null
+          igst_rate?: number | null
+          is_active?: boolean
+          created_at?: string
           updated_at?: string
         }
         Relationships: []
@@ -97,9 +386,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      // Items plus their HSN code, for lists and search (security_invoker view).
+      item_list: {
+        Row: Database["public"]["Tables"]["items"]["Row"] & { hsn_code: string | null }
+        Relationships: []
+      }
     }
     Functions: {
+      save_price_list: {
+        Args: {
+          target_id: string | null
+          name: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          price_list_type: Database["public"]["Enums"]["price_list_type"]
+          description: string
+          percentage_type: Database["public"]["Enums"]["percentage_type"] | null
+          percentage_value: number | null
+          round_off_to: Database["public"]["Enums"]["round_off_type"]
+          decimal_places: number | null
+          is_active: boolean
+          item_rates: Json
+        }
+        Returns: string
+      }
       save_user: {
         Args: {
           target_user_id: string
@@ -114,6 +423,19 @@ export type Database = {
       }
     }
     Enums: {
+      item_type: "Goods" | "Service"
+      percentage_type: "Markup" | "Markdown"
+      price_list_type: "All Items" | "Individual Items"
+      round_off_type:
+        | "Never mind"
+        | "Nearest whole number"
+        | "0.99"
+        | "0.50"
+        | "0.49"
+        | "Decimal Places"
+      tax_scope: "Intra-state" | "Inter-state"
+      tax_preference: "Taxable" | "Non-Taxable" | "Out of Scope" | "Non-GST Supply"
+      transaction_type: "Sales" | "Purchase"
       user_role: "owner" | "admin" | "manager" | "accountant" | "sales" | "staff"
     }
     CompositeTypes: {

@@ -24,7 +24,7 @@ export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   owner: "Full access, including managing other owners.",
   admin: "Full access and can manage users, except owners.",
   manager: "Runs day-to-day sales and operations.",
-  accountant: "Looks after pricing, discounts and reports.",
+  accountant: "Looks after pricing, price lists and reports.",
   sales: "Prepares quotations and sales orders.",
   staff: "Limited access, set per module.",
 }
@@ -35,7 +35,7 @@ export const ADMIN_ROLES: readonly UserRole[] = ["owner", "admin"]
 // Must match the module check on public.user_permissions.
 export const APP_MODULES = [
   "items",
-  "discounts",
+  "price_lists",
   "quotations",
   "sales_orders",
   "despatch",
@@ -46,7 +46,7 @@ export type AppModule = (typeof APP_MODULES)[number]
 
 export const MODULE_LABELS: Record<AppModule, string> = {
   items: "Items",
-  discounts: "Discounts",
+  price_lists: "Price Lists",
   quotations: "Quotations",
   sales_orders: "Sales Orders",
   despatch: "Despatch",
@@ -67,7 +67,7 @@ export const PERMISSION_ACTION_LABELS: Record<PermissionAction, string> = {
 // Actions that mean something for each module. Reports are read-only.
 export const MODULE_ACTIONS: Record<AppModule, readonly PermissionAction[]> = {
   items: PERMISSION_ACTIONS,
-  discounts: PERMISSION_ACTIONS,
+  price_lists: PERMISSION_ACTIONS,
   quotations: PERMISSION_ACTIONS,
   sales_orders: PERMISSION_ACTIONS,
   despatch: PERMISSION_ACTIONS,
@@ -86,7 +86,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
   admin: {},
   manager: {
     items: ALL_ACTIONS,
-    discounts: ALL_ACTIONS,
+    price_lists: ALL_ACTIONS,
     quotations: ALL_ACTIONS,
     sales_orders: ALL_ACTIONS,
     despatch: ALL_ACTIONS,
@@ -94,7 +94,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
   },
   accountant: {
     items: ["view"],
-    discounts: ALL_ACTIONS,
+    price_lists: ALL_ACTIONS,
     quotations: ["view"],
     sales_orders: ["view"],
     despatch: ["view"],
@@ -102,7 +102,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
   },
   sales: {
     items: ["view"],
-    discounts: ["view"],
+    price_lists: ["view"],
     quotations: VIEW_CREATE_EDIT,
     sales_orders: VIEW_CREATE_EDIT,
     despatch: ["view"],

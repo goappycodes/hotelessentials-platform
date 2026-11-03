@@ -10,6 +10,7 @@ import { toast } from "sonner"
 
 import { createUser, updateUser } from "@/actions/users"
 import { FormError } from "@/components/shared/form-error"
+import { FormFieldLabel } from "@/components/shared/form-field-label"
 import { FormInputField } from "@/components/shared/form-input-field"
 import { SubmitButton } from "@/components/shared/submit-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -107,7 +108,7 @@ export function UserForm(props: UserFormProps) {
         return
       }
 
-      toast.success(mode === "create" ? "User created." : "Changes saved.")
+      toast.success(mode === "create" ? "User created." : "User updated.")
       router.push(ROUTES.users)
     })
   }
@@ -142,6 +143,7 @@ export function UserForm(props: UserFormProps) {
               <FormInputField
                 control={form.control}
                 name="firstName"
+                required
                 label="First name"
                 autoComplete="off"
               />
@@ -154,6 +156,7 @@ export function UserForm(props: UserFormProps) {
               <FormInputField
                 control={form.control}
                 name="email"
+                required={mode === "create"}
                 label="Email"
                 type="email"
                 autoComplete="off"
@@ -172,6 +175,7 @@ export function UserForm(props: UserFormProps) {
                 <FormInputField
                   control={form.control}
                   name="password"
+                  required
                   label="Password"
                   type="password"
                   autoComplete="new-password"
@@ -196,7 +200,7 @@ export function UserForm(props: UserFormProps) {
                 name="role"
                 render={({ field }) => (
                   <Field>
-                    <FieldLabel htmlFor="role">Role</FieldLabel>
+                    <FormFieldLabel htmlFor="role" label="Role" required />
                     <Select
                       value={field.value}
                       disabled={isSelf || readOnly || isPending}
@@ -277,7 +281,7 @@ export function UserForm(props: UserFormProps) {
         </Button>
         {!readOnly && (
           <SubmitButton pending={isPending}>
-            {mode === "create" ? "Create user" : "Save changes"}
+            {mode === "create" ? "Create user" : "Update"}
           </SubmitButton>
         )}
       </div>

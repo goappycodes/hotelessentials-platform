@@ -49,6 +49,16 @@ only when neither exists. Feature components go in `src/features/<feature>/compo
 reusable app components in `src/components/shared`, layout pieces in
 `src/components/layout`.
 
+## Forms
+
+- Build forms from the shared fields in `src/components/shared`: `FormInputField`
+  (`startAddon`/`endAddon` for ₹ or %), `FormSelectField`, `FormComboboxField` (searchable,
+  optional "add what you typed") and `FormTextareaField`. All take `required` (red label
+  with *), `hint` (help tooltip) and `orientation="horizontal"` for Zoho-style rows with
+  the label on the left.
+- Money and percentages are strings in forms (validated with `MONEY_PATTERN`) and
+  converted to numbers in the Server Action.
+
 ## Pages
 
 - Dashboard pages render inside `PageContainer` with a `PageHeader` (title, description,
