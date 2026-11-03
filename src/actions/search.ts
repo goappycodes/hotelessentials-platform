@@ -1,0 +1,46 @@
+"use server"
+
+import { z } from "zod"
+
+import { searchUsers } from "@/features/users/search"
+import { hasAccess, type AccessScope } from "@/lib/permissions"
+import { fetchSession } from "@/lib/session"
+import type { SearchResult, SearchScope } from "@/types/search"
+
+const SUGGESTION_LIMIT = 5
+
+type SearchProvider = {
+  access: AccessScope
+  search?: (term: string, limit: number) => Promise<SearchResult[]>
+}
+
+// Each module plugs in its search here once its table exists.
+const PROVIDERS: Record<SearchScope, SearchProvider> = {
+  users: { access: "admin", search: searchUsers },
+  items: { access: "items" },
+  discounts: { access: "discounts" },
+  quotations: { access: "quotations" },
+  sales_orders: { access: "sales_orders" },
+  despatch: { access: "despatch" },
+}
+
+const inputSchema = z.object({
+  scope: z.enum(Object.keys(PROVIDERS) as [SearchScope, ...SearchScope[]]),
+  term: z.string().trim().min(1).max(100),
+})
+
+// Suggestions for the header search, limited to the current module and what the user
+// may view. Returns an empty list rather than an error for anything not allowed.
+export async function searchRecords(
+  scope: SearchScope,
+  term: string
+): Promise<SearchResult[]> {
+  const parsed = inputSchema.safeParse({ scope, term })
+  if (!parsed.success) return []
+
+  const session = await fetchSession()
+  const provider = PROVIDERS[parsed.data.scope]
+  if (!session?.user.isActive || !hasAccess(session, provider.access)) return []
+
+  return provider.search?.(parsed.data.term, SUGGESTION_LIMIT) ?? []
+}
