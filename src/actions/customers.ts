@@ -3,6 +3,7 @@
 import type { PostgrestError } from "@supabase/supabase-js"
 import { z } from "zod"
 
+import { PAGE_SIZE_OPTIONS } from "@/constants/list"
 import type { PermissionAction } from "@/constants/permissions"
 import { toContactRows, toCustomerRow } from "@/features/customers/customer-input"
 import { CUSTOMERS_LIST } from "@/features/customers/list-config"
@@ -68,6 +69,48 @@ export async function deleteCustomer(customerId: string): Promise<ActionResult> 
   if (error) return { success: false, error: getCustomerErrorMessage(error) }
   if (!data) return { success: false, error: "This customer no longer exists." }
   return { success: true, data: undefined }
+}
+
+// Customers picked with the list checkboxes: at most one page.
+const customerIdsSchema = z.array(z.uuid()).min(1).max(Math.max(...PAGE_SIZE_OPTIONS))
+
+export type BulkCustomersResult = { changed: number }
+
+// Mark as Active / Mark as Inactive for the selected customers.
+export async function setCustomersActive(
+  customerIds: string[],
+  isActive: boolean
+): Promise<ActionResult<BulkCustomersResult>> {
+  const ids = customerIdsSchema.safeParse(customerIds)
+  if (!ids.success) return { success: false, error: INVALID_INPUT }
+  if (!(await authorize("edit"))) return { success: false, error: NOT_ALLOWED }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("customers")
+    .update({ is_active: isActive === true })
+    .in("id", ids.data)
+    .select("id")
+  if (error) return { success: false, error: getCustomerErrorMessage(error) }
+  return { success: true, data: { changed: data.length } }
+}
+
+// Delete for the selected customers (their contact persons go with them).
+export async function deleteCustomers(
+  customerIds: string[]
+): Promise<ActionResult<BulkCustomersResult>> {
+  const ids = customerIdsSchema.safeParse(customerIds)
+  if (!ids.success) return { success: false, error: INVALID_INPUT }
+  if (!(await authorize("delete"))) return { success: false, error: NOT_ALLOWED }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("customers")
+    .delete()
+    .in("id", ids.data)
+    .select("id")
+  if (error) return { success: false, error: getCustomerErrorMessage(error) }
+  return { success: true, data: { changed: data.length } }
 }
 
 const countFiltersSchema = z.record(z.string(), z.string())

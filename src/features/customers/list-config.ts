@@ -17,6 +17,16 @@ export const CUSTOMERS_LIST: ListConfig = {
   search: { columns: ["display_name", "company_name", "email", "work_phone", "mobile", "gstin"] },
 }
 
+// Columns of the customers table (and its loading skeleton).
+export const CUSTOMER_COLUMNS = [
+  "Name",
+  "Company Name",
+  "Email",
+  "Phone",
+  "Place of Supply",
+  "Status",
+]
+
 export const CUSTOMER_TYPE_FILTER_OPTIONS = CUSTOMER_TYPES.map((type) => ({
   value: type,
   label: type,

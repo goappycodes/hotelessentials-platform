@@ -5,7 +5,6 @@ import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
 import { AccessGate } from "@/components/shared/access-gate"
-import { ListFilterMenu } from "@/components/shared/list-filter-menu"
 import {
   ListPageActions,
   ListPageActionsSkeleton,
@@ -16,11 +15,7 @@ import {
   CustomersTable,
   CustomersTableSkeleton,
 } from "@/features/customers/components/customers-table"
-import {
-  CUSTOMER_STATUS_FILTER_OPTIONS,
-  CUSTOMER_TYPE_FILTER_OPTIONS,
-  CUSTOMERS_LIST,
-} from "@/features/customers/list-config"
+import { CUSTOMERS_LIST } from "@/features/customers/list-config"
 import { hasAccess } from "@/lib/permissions"
 import { requireUser } from "@/lib/session"
 
@@ -47,20 +42,7 @@ export default function CustomersPage({ searchParams }: PageProps<"/customers">)
       />
       <Suspense fallback={<CustomersTableSkeleton />}>
         <AccessGate scope={navItem.access} denied={<AccessDenied area={navItem.title} />}>
-          <div className="flex flex-wrap gap-2">
-            <ListFilterMenu
-              config={CUSTOMERS_LIST}
-              filterKey="customer_type"
-              label="Type"
-              options={CUSTOMER_TYPE_FILTER_OPTIONS}
-            />
-            <ListFilterMenu
-              config={CUSTOMERS_LIST}
-              filterKey="is_active"
-              label="Status"
-              options={CUSTOMER_STATUS_FILTER_OPTIONS}
-            />
-          </div>
+          {/* Filters, the table and the bulk actions bar. */}
           <CustomersTable searchParams={searchParams} />
         </AccessGate>
       </Suspense>

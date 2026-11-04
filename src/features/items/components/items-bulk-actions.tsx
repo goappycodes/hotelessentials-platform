@@ -82,7 +82,9 @@ export function ItemsBulkActions({
     <div
       role="toolbar"
       aria-label="Selected items"
-      className="flex min-h-12 flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm"
+      // Pinned just under the app header (h-14) while the list scrolls; above the rows'
+      // checkboxes (z-1), below the header and its search dropdown (z-10).
+      className="sticky top-16 z-[5] flex min-h-12 flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2 shadow-sm"
     >
       <Tooltip>
         <TooltipTrigger asChild>
