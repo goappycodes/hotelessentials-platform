@@ -12,7 +12,7 @@ import { saveQuotation } from "@/actions/quotations"
 import { FormAutocompleteField } from "@/components/shared/form-autocomplete-field"
 import { FormComboboxField } from "@/components/shared/form-combobox-field"
 import { FormError } from "@/components/shared/form-error"
-import { HORIZONTAL_FIELD_CLASS } from "@/components/shared/form-field-label"
+import { FieldHint, HORIZONTAL_FIELD_CLASS } from "@/components/shared/form-field-label"
 import { FormInputField } from "@/components/shared/form-input-field"
 import { FormTextareaField } from "@/components/shared/form-textarea-field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -31,6 +31,7 @@ import {
   type PendingAttachment,
   type QuotationAttachmentView,
 } from "@/features/quotations/components/quotation-attachments-field"
+import { DirectTaxField } from "@/features/quotations/components/direct-tax-field"
 import { QuotationItemsTable } from "@/features/quotations/components/quotation-items-table"
 import type { QuotationFormOptions } from "@/features/quotations/queries"
 import { invalidateQuotationDetail } from "@/features/quotations/quotation-detail-cache"
@@ -46,6 +47,8 @@ const PLACE_OF_SUPPLY_OPTIONS = [
 
 type QuotationFormProps = {
   options: QuotationFormOptions
+  // Owners and admins can add TDS / TCS rates from the totals.
+  canManageDirectTaxes: boolean
   defaultValues: QuotationInput
 } & (
   | {
@@ -75,6 +78,8 @@ export function QuotationForm(props: QuotationFormProps) {
   const [error, setError] = useState<string>()
   const [savedFiles, setSavedFiles] = useState(mode === "edit" ? props.attachments : [])
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([])
+  // TDS / TCS rates, with any added from this form.
+  const [directTaxes, setDirectTaxes] = useState(options.directTaxes)
   const disabled = readOnly || isPending
 
   const form = useForm<QuotationInput>({
@@ -101,6 +106,12 @@ export function QuotationForm(props: QuotationFormProps) {
     isDiscountBeforeTax: values.isDiscountBeforeTax ?? true,
     adjustment: num(values.adjustment ?? ""),
     taxes: options.taxes,
+    directTax: (() => {
+      const rate = directTaxes.find((entry) => entry.id === values.directTaxId)
+      return rate && rate.kind === values.taxDeductionType
+        ? { kind: rate.kind, rate: rate.rate }
+        : null
+    })(),
   })
 
   // Lines from items follow the place of supply: CGST + SGST in the business's own
@@ -349,7 +360,21 @@ export function QuotationForm(props: QuotationFormProps) {
                     rows={2}
                   />
                 }
-                totals={<Totals totals={totals} disabled={disabled} />}
+                totals={
+                  <Totals
+                    totals={totals}
+                    disabled={disabled}
+                    directTax={
+                      <DirectTaxField
+                        rates={directTaxes}
+                        amount={totals.directTaxAmount}
+                        canManage={props.canManageDirectTaxes}
+                        disabled={disabled}
+                        onRateAdded={(rate) => setDirectTaxes((current) => [...current, rate])}
+                      />
+                    }
+                  />
+                }
               />
             </section>
 
@@ -403,13 +428,16 @@ export function QuotationForm(props: QuotationFormProps) {
   )
 }
 
-// Sub total, the whole-quote discount, GST by rate, adjustment and total.
+// Like Zoho: sub total, the whole-quote discount, GST by rate, TDS / TCS, adjustment
+// and total.
 function Totals({
   totals,
   disabled,
+  directTax,
 }: {
   totals: ReturnType<typeof computeQuotationTotals>
   disabled: boolean
+  directTax: React.ReactNode
 }) {
   const { control, register, getFieldState, formState } = useFormContext<QuotationInput>()
   const adjustment = useWatch({ control, name: "adjustment" })
@@ -428,6 +456,8 @@ function Totals({
         <Row key={line.label} label={line.label} value={formatCurrency(line.amount)} muted />
       ))}
 
+      {directTax}
+
       <div className="flex items-center justify-between gap-3">
         <Input
           {...register("adjustmentDescription")}
@@ -445,7 +475,8 @@ function Totals({
           disabled={disabled}
           className="h-8 w-28 bg-background text-right tabular-nums"
         />
-        <span className="w-24 text-right tabular-nums">
+        <FieldHint label="Adjustment" hint="Add any other +ve or -ve charges that need to be applied to adjust the total amount of the transaction, e.g. +10 or -10." />
+        <span className="ml-auto w-24 text-right tabular-nums">
           {formatCurrency(Number(adjustment) || 0)}
         </span>
       </div>

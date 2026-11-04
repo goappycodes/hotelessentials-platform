@@ -38,6 +38,8 @@ export function newQuotationInput(today: string): QuotationInput {
     isDiscountBeforeTax: true,
     adjustment: "0.00",
     adjustmentDescription: DEFAULT_ADJUSTMENT_LABEL,
+    taxDeductionType: "TDS",
+    directTaxId: "",
     notes: "",
     terms: DEFAULT_QUOTATION_TERMS,
     lines: [{ ...EMPTY_LINE }],
@@ -68,6 +70,8 @@ export function toQuotationInput(
     isDiscountBeforeTax: quote.is_discount_before_tax,
     adjustment: quote.adjustment ? toMoneyInput(quote.adjustment) : "0.00",
     adjustmentDescription: quote.adjustment_description ?? DEFAULT_ADJUSTMENT_LABEL,
+    taxDeductionType: quote.tax_deduction_type,
+    directTaxId: quote.direct_tax_id ?? "",
     notes: quote.notes ?? "",
     terms: quote.terms ?? "",
     lines: lines.map((line) => ({

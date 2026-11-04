@@ -26,7 +26,7 @@ import {
 } from "@/features/quotations/queries"
 import { todayInIndia, toQuotationInput } from "@/features/quotations/quotation-input"
 import { formatCurrency } from "@/lib/format"
-import { hasAccess } from "@/lib/permissions"
+import { hasAccess, isAdminRole } from "@/lib/permissions"
 import { requireUser } from "@/lib/session"
 import { createRequestClient } from "@/lib/supabase/server"
 
@@ -105,6 +105,7 @@ async function QuotationDetails({ params }: Pick<PageProps<"/quotations/[id]/edi
       />
       <QuotationForm
         mode="edit"
+        canManageDirectTaxes={isAdminRole(session.role)}
         quotationId={quote.id}
         options={options}
         defaultValues={toQuotationInput(quote, linesResult.data)}

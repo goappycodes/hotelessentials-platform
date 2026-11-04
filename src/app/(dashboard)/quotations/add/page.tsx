@@ -11,7 +11,7 @@ import {
 } from "@/features/quotations/components/quotation-form"
 import { getQuotationFormOptions } from "@/features/quotations/queries"
 import { newQuotationInput, todayInIndia } from "@/features/quotations/quotation-input"
-import { hasAccess } from "@/lib/permissions"
+import { hasAccess, isAdminRole } from "@/lib/permissions"
 import { requireUser } from "@/lib/session"
 import { createRequestClient } from "@/lib/supabase/server"
 
@@ -56,6 +56,7 @@ async function NewQuotationForm() {
   return (
     <QuotationForm
       mode="create"
+      canManageDirectTaxes={isAdminRole(session.role)}
       options={options}
       defaultValues={defaults}
       suggestedQuoteNumber={suggestedQuoteNumber}

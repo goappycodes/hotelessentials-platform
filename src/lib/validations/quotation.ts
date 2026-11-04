@@ -70,6 +70,9 @@ export const quotationSchema = z
       .trim()
       .refine((value) => value === "" || /^-?\d{1,11}(\.\d{1,4})?$/.test(value), "Enter an amount like 10 or -0.40"),
     adjustmentDescription: text(100, "Adjustment label"),
+    // TDS (comes off the total) or TCS (added), and the rate picked for it.
+    taxDeductionType: z.enum(["TDS", "TCS"]),
+    directTaxId: optionalId,
     notes: text(2000, "Customer notes"),
     terms: text(5000, "Terms & conditions"),
     lines: z

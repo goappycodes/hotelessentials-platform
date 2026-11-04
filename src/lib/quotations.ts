@@ -21,6 +21,8 @@ export type QuotationTotalsInput = {
   isDiscountBeforeTax: boolean
   adjustment: number
   taxes: readonly TaxRate[]
+  // TDS or TCS picked under the sub total (its rate), if any.
+  directTax?: { kind: Enums<"direct_tax_kind">; rate: number } | null
 }
 
 export type TaxBreakdownLine = { label: string; amount: number }
@@ -36,6 +38,8 @@ export type QuotationTotals = {
   // CGST / SGST / IGST by rate, e.g. "CGST9 (9%)".
   taxBreakdown: TaxBreakdownLine[]
   taxTotal: number
+  // TDS taken off or TCS added (always positive; directTaxKind says which).
+  directTaxAmount: number
   total: number
 }
 
@@ -91,7 +95,19 @@ export function computeQuotationTotals(input: QuotationTotalsInput): QuotationTo
 
   const taxBreakdown = [...components].map(([label, amount]) => ({ label, amount: round2(amount) }))
   const taxTotal = round2(taxBreakdown.reduce((sum, line) => sum + line.amount, 0))
-  const total = round2(subTotal - transactionDiscount + taxTotal + input.adjustment)
+  // Like Zoho: TDS is worked out on the amount before GST and comes off the total; TCS is
+  // worked out on the amount with GST and is added.
+  const beforeTax = subTotal - transactionDiscount
+  const directTax = input.directTax
+  const directTaxAmount = directTax
+    ? round2(((directTax.kind === "TDS" ? beforeTax : beforeTax + taxTotal) * directTax.rate) / 100)
+    : 0
+  const total = round2(
+    beforeTax +
+      taxTotal +
+      (directTax?.kind === "TCS" ? directTaxAmount : -directTaxAmount) +
+      input.adjustment
+  )
 
   return {
     lineAmounts,
@@ -100,6 +116,7 @@ export function computeQuotationTotals(input: QuotationTotalsInput): QuotationTo
     discountTotal: round2(lineDiscounts.reduce((sum, value) => sum + value, 0) + transactionDiscount),
     taxBreakdown,
     taxTotal,
+    directTaxAmount,
     total,
   }
 }

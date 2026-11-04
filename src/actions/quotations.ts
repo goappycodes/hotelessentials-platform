@@ -69,8 +69,22 @@ export async function saveQuotation(
 
   const quote = parsed.data
   const supabase = await createClient()
-  const { data: taxes, error: taxError } = await supabase.from("tax_rates").select(TAX_RATE_COLUMNS)
+  const [{ data: taxes, error: taxError }, directTaxResult] = await Promise.all([
+    supabase.from("tax_rates").select(TAX_RATE_COLUMNS),
+    quote.directTaxId
+      ? supabase
+          .from("direct_tax_rates")
+          .select("kind, rate")
+          .eq("id", quote.directTaxId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
   if (taxError) return { success: false, error: getDatabaseErrorMessage(taxError) }
+  // TDS or TCS, worked out with the rate as it is now.
+  const directTax = directTaxResult.data
+  if (quote.directTaxId && (!directTax || directTax.kind !== quote.taxDeductionType)) {
+    return { success: false, error: `Pick the ${quote.taxDeductionType} rate again.` }
+  }
 
   const lines = quote.lines.map((line) => ({
     quantity: num(line.quantity),
@@ -87,6 +101,7 @@ export async function saveQuotation(
     isDiscountBeforeTax: quote.isDiscountBeforeTax,
     adjustment: num(quote.adjustment),
     taxes,
+    directTax,
   })
 
   const { data, error } = await supabase.rpc("save_quotation", {
@@ -114,6 +129,9 @@ export async function saveQuotation(
       discount_total: totals.discountTotal,
       tax_total: totals.taxTotal,
       total: totals.total,
+      tax_deduction_type: quote.taxDeductionType,
+      direct_tax_id: quote.directTaxId || null,
+      direct_tax_amount: totals.directTaxAmount,
     },
     items: quote.lines.map((line, index) => ({
       item_id: line.itemId || null,

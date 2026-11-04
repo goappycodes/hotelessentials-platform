@@ -31,6 +31,7 @@ export const ROUTES = {
   usersAdd: "/users/add",
   taxes: "/settings/taxes",
   taxesAdd: "/settings/taxes/add",
+  directTaxes: "/settings/direct-taxes",
 } as const
 
 export function userRoute(id: string) {

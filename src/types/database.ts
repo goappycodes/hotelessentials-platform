@@ -155,6 +155,12 @@ export type Database = {
           discount_total: number
           tax_total: number
           total: number
+          // TDS comes off the total, TCS is added; name and rate are kept as picked.
+          tax_deduction_type: Database["public"]["Enums"]["direct_tax_kind"]
+          direct_tax_id: string | null
+          direct_tax_name: string | null
+          direct_tax_rate: number | null
+          direct_tax_amount: number
           created_by: string | null
           created_at: string
           updated_at: string
@@ -188,6 +194,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      direct_tax_rates: {
+        Row: {
+          id: string
+          kind: Database["public"]["Enums"]["direct_tax_kind"]
+          name: string
+          rate: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Partial<Database["public"]["Tables"]["direct_tax_rates"]["Row"]> & {
+          kind: Database["public"]["Enums"]["direct_tax_kind"]
+          name: string
+          rate: number
+        }
+        Update: Partial<Database["public"]["Tables"]["direct_tax_rates"]["Row"]>
+        Relationships: []
       }
       quotation_attachments: {
         Row: {
@@ -851,6 +875,7 @@ export type Database = {
       customer_tax_preference: "Taxable" | "Tax Exempt"
       discount_level: "Transaction" | "Line Item"
       quotation_status: "Draft" | "Sent" | "Accepted" | "Declined"
+      direct_tax_kind: "TDS" | "TCS"
       customer_type: "Business" | "Individual"
       gst_treatment:
         | "Registered Business - Regular"

@@ -349,6 +349,19 @@ export function QuotationDocument({
                   <dd>{amount(value)}</dd>
                 </div>
               ))}
+              {quote.direct_tax_amount > 0 && (
+                <>
+                  <dt>
+                    {quote.tax_deduction_type}
+                    {quote.direct_tax_name &&
+                      ` (${quote.direct_tax_name}${quote.direct_tax_rate !== null ? ` ${Number(quote.direct_tax_rate.toFixed(2))}%` : ""})`}
+                  </dt>
+                  <dd>
+                    {quote.tax_deduction_type === "TDS" ? "(−) " : ""}
+                    {amount(quote.direct_tax_amount)}
+                  </dd>
+                </>
+              )}
               {quote.adjustment !== 0 && (
                 <>
                   <dt>{quote.adjustment_description || "Adjustment"}</dt>

@@ -31,7 +31,7 @@ async function getCustomerOptions(supabase: Client) {
 
 // Everything the quotation form picks from.
 export async function getQuotationFormOptions(supabase: Client) {
-  const [customers, salespeople, priceLists, taxes, settings] = await Promise.all([
+  const [customers, salespeople, priceLists, taxes, settings, directTaxes] = await Promise.all([
     getCustomerOptions(supabase),
     supabase.from("profiles").select("id, first_name, last_name, is_active").order("first_name"),
     supabase
@@ -41,6 +41,7 @@ export async function getQuotationFormOptions(supabase: Client) {
       .order("name"),
     supabase.from("tax_rates").select(TAX_RATE_COLUMNS).order("rate"),
     supabase.from("organization_settings").select("gst_state_code").maybeSingle(),
+    supabase.from("direct_tax_rates").select("id, kind, name, rate, is_active").order("name"),
   ])
   if (salespeople.error || taxes.error) throw new Error("Failed to load the quotation form")
 
@@ -55,6 +56,8 @@ export async function getQuotationFormOptions(supabase: Client) {
     priceLists: priceLists.data ?? [],
     taxes: taxes.data,
     businessState: settings.data?.gst_state_code ?? null,
+    // TDS and TCS rates for the totals.
+    directTaxes: directTaxes.data ?? [],
   }
 }
 

@@ -7,6 +7,7 @@ import {
   Percent,
   Settings,
   House,
+  Landmark,
   Package,
   ShoppingCart,
   Truck,
@@ -133,6 +134,13 @@ export const MODULE_NAV_ITEMS = {
     create: { href: ROUTES.taxesAdd, title: "New Tax" },
     access: "admin",
   },
+  directTaxes: {
+    title: "Direct Taxes",
+    href: ROUTES.directTaxes,
+    icon: Landmark,
+    description: "TDS and TCS rates that quotations can apply under the sub total.",
+    access: "admin",
+  },
 } satisfies Record<string, NavItem>
 
 export type NavGroup = {
@@ -174,7 +182,7 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
   {
     title: "Settings",
     icon: Settings,
-    items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes],
+    items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes, MODULE_NAV_ITEMS.directTaxes],
   },
 ]
 
