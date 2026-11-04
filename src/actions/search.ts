@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 
+import { searchCustomers } from "@/features/customers/search"
 import { searchInventoryAdjustments } from "@/features/inventory-adjustments/search"
 import { searchItems } from "@/features/items/search"
 import { searchPriceLists } from "@/features/price-lists/search"
@@ -23,6 +24,7 @@ const PROVIDERS: Record<SearchScope, SearchProvider> = {
   items: { access: "items", search: searchItems },
   price_lists: { access: "price_lists", search: searchPriceLists },
   inventory_adjustments: { access: "inventory_adjustments", search: searchInventoryAdjustments },
+  customers: { access: "customers", search: searchCustomers },
   quotations: { access: "quotations" },
   sales_orders: { access: "sales_orders" },
   despatch: { access: "despatch" },

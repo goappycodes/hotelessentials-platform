@@ -16,6 +16,8 @@ export const ROUTES = {
   priceListsAdd: "/price-lists/add",
   inventoryAdjustments: "/inventory/adjustments",
   inventoryAdjustmentsAdd: "/inventory/adjustments/add",
+  customers: "/customers",
+  customersAdd: "/customers/add",
   quotations: "/quotations",
   quotationsAdd: "/quotations/add",
   salesOrders: "/sales-orders",
@@ -46,6 +48,10 @@ export function itemEditRoute(id: string) {
 
 export function priceListRoute(id: string) {
   return `${ROUTES.priceLists}/${id}`
+}
+
+export function customerRoute(id: string) {
+  return `${ROUTES.customers}/${id}`
 }
 
 export function inventoryAdjustmentRoute(id: string) {

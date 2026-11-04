@@ -12,6 +12,100 @@ export type Database = {
   }
   public: {
     Tables: {
+      customers: {
+        Row: {
+          id: string
+          customer_type: Database["public"]["Enums"]["customer_type"]
+          salutation: string | null
+          first_name: string | null
+          last_name: string | null
+          company_name: string | null
+          display_name: string
+          email: string | null
+          work_phone: string | null
+          mobile: string | null
+          language: string
+          gst_treatment: Database["public"]["Enums"]["gst_treatment"] | null
+          gstin: string | null
+          place_of_supply: string | null
+          pan: string | null
+          tax_preference: Database["public"]["Enums"]["customer_tax_preference"]
+          exemption_reason: string | null
+          accounts_receivable: string
+          opening_balance: number
+          payment_terms: string
+          price_list_id: string | null
+          owner_id: string | null
+          billing_attention: string | null
+          billing_country: string | null
+          billing_street1: string | null
+          billing_street2: string | null
+          billing_city: string | null
+          billing_state: string | null
+          billing_pin_code: string | null
+          billing_phone: string | null
+          billing_fax: string | null
+          shipping_attention: string | null
+          shipping_country: string | null
+          shipping_street1: string | null
+          shipping_street2: string | null
+          shipping_city: string | null
+          shipping_state: string | null
+          shipping_pin_code: string | null
+          shipping_phone: string | null
+          shipping_fax: string | null
+          remarks: string | null
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        // Customers are saved through public.save_customer.
+        Insert: Partial<Database["public"]["Tables"]["customers"]["Row"]> & { display_name: string }
+        Update: Partial<Database["public"]["Tables"]["customers"]["Row"]>
+        Relationships: [
+          {
+            foreignKeyName: "customers_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_contacts: {
+        Row: {
+          id: string
+          customer_id: string
+          salutation: string | null
+          first_name: string | null
+          last_name: string | null
+          email: string | null
+          work_phone: string | null
+          mobile: string | null
+          sort_order: number
+        }
+        Insert: Partial<Database["public"]["Tables"]["customer_contacts"]["Row"]> & {
+          customer_id: string
+        }
+        Update: Partial<Database["public"]["Tables"]["customer_contacts"]["Row"]>
+        Relationships: [
+          {
+            foreignKeyName: "customer_contacts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hsn_codes: {
         Row: {
           id: string
@@ -506,6 +600,16 @@ export type Database = {
       }
     }
     Functions: {
+      save_customer: {
+        Args: {
+          target_id: string | null
+          // customers columns (see lib/validations/customer.ts → toCustomerRow)
+          customer: Json
+          // [{ salutation, first_name, last_name, email, work_phone, mobile }]
+          contacts: Json
+        }
+        Returns: string
+      }
       save_inventory_adjustment: {
         Args: {
           target_id: string | null
@@ -552,6 +656,18 @@ export type Database = {
     Enums: {
       adjustment_mode: "Quantity Adjustment" | "Value Adjustment"
       adjustment_status: "Draft" | "Adjusted"
+      customer_tax_preference: "Taxable" | "Tax Exempt"
+      customer_type: "Business" | "Individual"
+      gst_treatment:
+        | "Registered Business - Regular"
+        | "Registered Business - Composition"
+        | "Unregistered Business"
+        | "Consumer"
+        | "Overseas"
+        | "Special Economic Zone"
+        | "Deemed Export"
+        | "Tax Deductor"
+        | "SEZ Developer"
       inventory_valuation_method: "FIFO (First In, First Out)" | "WAC (Weighted Average Costing)"
       item_type: "Goods" | "Service"
       percentage_type: "Markup" | "Markdown"

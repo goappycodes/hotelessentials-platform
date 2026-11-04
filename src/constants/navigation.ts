@@ -2,6 +2,7 @@ import {
   BadgePercent,
   ChartColumn,
   ClipboardList,
+  Contact,
   FileText,
   Percent,
   Settings,
@@ -67,6 +68,18 @@ export const MODULE_NAV_ITEMS = {
     search: {
       placeholder: "Search adjustments by reason or reference",
       scope: "inventory_adjustments",
+    },
+  },
+  customers: {
+    title: "Customers",
+    href: ROUTES.customers,
+    icon: Contact,
+    description: "Manage the customers you sell to.",
+    create: { href: ROUTES.customersAdd, title: "New Customer" },
+    access: "customers",
+    search: {
+      placeholder: "Search customers by name, company, email, phone or GSTIN",
+      scope: "customers",
     },
   },
   quotations: {
@@ -151,6 +164,7 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
     title: "Sales",
     icon: ShoppingCart,
     items: [
+      MODULE_NAV_ITEMS.customers,
       MODULE_NAV_ITEMS.quotations,
       MODULE_NAV_ITEMS.salesOrders,
       MODULE_NAV_ITEMS.despatch,
