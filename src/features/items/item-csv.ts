@@ -9,6 +9,7 @@ import {
   TAX_PREFERENCES,
 } from "@/constants/items"
 import { parseCsv } from "@/lib/csv"
+import type { CsvReadResult, ImportProblem } from "@/lib/csv-import"
 import { itemImportRowSchema, type ItemImportRow } from "@/lib/validations/item-import"
 import type { Enums, Tables } from "@/types/database"
 
@@ -60,15 +61,7 @@ const COLUMN_ALIASES: Record<string, readonly string[]> = {
 // The only column a file must have.
 export const REQUIRED_ITEM_COLUMNS = ["Item Name"] as const
 
-export type ImportProblem = { row: number; name: string; message: string }
-
-export type ReadItemCsvResult = {
-  rows: ItemImportRow[]
-  problems: ImportProblem[]
-  missingColumns: string[]
-  // Data rows in the file (not counting the header).
-  totalRows: number
-}
+export type ReadItemCsvResult = CsvReadResult<ItemImportRow>
 
 const FIELD_LABELS: Partial<Record<keyof ItemImportRow, string>> = {
   externalId: "Item ID",

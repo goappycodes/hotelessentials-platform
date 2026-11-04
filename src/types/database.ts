@@ -56,11 +56,13 @@ export type Database = {
           shipping_fax: string | null
           remarks: string | null
           is_active: boolean
+          // The customer's ID in the system it was imported from (Zoho "Contact ID").
+          external_id: string | null
           created_by: string | null
           created_at: string
           updated_at: string
         }
-        // Customers are saved through public.save_customer.
+        // Customers are saved through public.save_customer (imports insert directly).
         Insert: Partial<Database["public"]["Tables"]["customers"]["Row"]> & { display_name: string }
         Update: Partial<Database["public"]["Tables"]["customers"]["Row"]>
         Relationships: [

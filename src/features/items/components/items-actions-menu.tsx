@@ -1,14 +1,25 @@
 "use client"
 
-import { useRef } from "react"
-
-import { ListActionsMenu } from "@/components/shared/list-actions-menu"
+import { importItems } from "@/actions/item-import"
+import { CsvListActionsMenu, type CsvImporter } from "@/components/shared/csv-import"
+import { ITEM_IMPORT_BATCH_SIZE } from "@/constants/items"
 import { ROUTES } from "@/constants/routes"
-import { ItemImportDialog, useItemImport } from "@/features/items/components/item-import"
+import { readItemCsv } from "@/features/items/item-csv"
 import { ITEMS_LIST } from "@/features/items/list-config"
+import type { ItemImportRow } from "@/lib/validations/item-import"
 
-// The Items "⋯" menu. Import opens the file picker straight away and imports the chosen
-// CSV on this page; Export downloads a CSV.
+// A Zoho Books item export imports as it is. Rows matching an existing item (by Item ID,
+// or by SKU for items added in the app) are skipped.
+const ITEM_IMPORTER: CsvImporter<ItemImportRow> = {
+  entityPlural: "items",
+  nameColumn: "Item Name",
+  read: readItemCsv,
+  importBatch: (rows) => importItems(rows, "skip"),
+  batchSize: ITEM_IMPORT_BATCH_SIZE,
+  note: "Stock levels in the file aren't imported.",
+}
+
+// The Items "⋯" menu: Import opens the file picker straight away; Export downloads a CSV.
 export function ItemsActionsMenu({
   entityLabel,
   canImport,
@@ -16,34 +27,13 @@ export function ItemsActionsMenu({
   entityLabel: string
   canImport: boolean
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const { state, run, reset } = useItemImport()
-
   return (
-    <>
-      <ListActionsMenu
-        entityLabel={entityLabel}
-        config={ITEMS_LIST}
-        onImport={canImport ? () => inputRef.current?.click() : undefined}
-        exportHref={ROUTES.itemsExport}
-      />
-      {canImport && (
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".csv,text/csv"
-          aria-label="Choose a CSV file of items to import"
-          className="sr-only"
-          tabIndex={-1}
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            // Cleared so picking the same file again still triggers an import.
-            event.target.value = ""
-            if (file) void run(file)
-          }}
-        />
-      )}
-      <ItemImportDialog state={state} onClose={reset} />
-    </>
+    <CsvListActionsMenu
+      entityLabel={entityLabel}
+      config={ITEMS_LIST}
+      canImport={canImport}
+      exportHref={ROUTES.itemsExport}
+      importer={ITEM_IMPORTER}
+    />
   )
 }

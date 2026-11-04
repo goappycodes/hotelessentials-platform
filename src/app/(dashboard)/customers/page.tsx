@@ -11,6 +11,7 @@ import {
   ListPageActionsSkeleton,
 } from "@/components/shared/list-page-actions"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
+import { CustomersActionsMenu } from "@/features/customers/components/customers-actions-menu"
 import {
   CustomersTable,
   CustomersTableSkeleton,
@@ -76,6 +77,12 @@ async function CustomersPageActions() {
       create={hasAccess(session, navItem.access, "create") ? navItem.create : undefined}
       entityLabel={navItem.title}
       config={CUSTOMERS_LIST}
+      menu={
+        <CustomersActionsMenu
+          entityLabel={navItem.title}
+          canImport={hasAccess(session, navItem.access, "create")}
+        />
+      }
     />
   )
 }

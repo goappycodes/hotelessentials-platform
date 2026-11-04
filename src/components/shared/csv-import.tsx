@@ -2,10 +2,10 @@
 
 import { CircleCheck, Download, TriangleAlert } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
-import { importItems } from "@/actions/item-import"
 import { FormError } from "@/components/shared/form-error"
+import { ListActionsMenu } from "@/components/shared/list-actions-menu"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -25,10 +25,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ITEM_IMPORT_BATCH_SIZE } from "@/constants/items"
-import { readItemCsv, type ImportProblem } from "@/features/items/item-csv"
+import type { ListConfig } from "@/constants/list"
 import { toCsv } from "@/lib/csv"
+import type { CsvImportResult, CsvReadResult, ImportProblem } from "@/lib/csv-import"
 import { cn } from "@/lib/utils"
+import type { ActionResult } from "@/types/actions"
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024
 // Problems listed in the dialog; the full list is in the downloadable report.
@@ -36,9 +37,9 @@ const PROBLEMS_SHOWN = 50
 
 const numberFormat = new Intl.NumberFormat("en-IN")
 
-type Totals = { created: number; updated: number; skipped: number; failed: ImportProblem[] }
+type Totals = Omit<CsvImportResult, "failed"> & { failed: ImportProblem[] }
 
-export type ItemImportState =
+export type CsvImportState =
   | { stage: "idle" }
   | { stage: "reading"; fileName: string }
   | { stage: "importing"; fileName: string; done: number; total: number }
@@ -51,26 +52,24 @@ export type ItemImportState =
       error?: string
     }
 
-function downloadReport(problems: ImportProblem[]) {
-  const csv = toCsv([
-    ["Row", "Item Name", "Problem"],
-    ...problems.map((problem) => [problem.row, problem.name, problem.message]),
-  ])
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }))
-  const link = document.createElement("a")
-  link.href = url
-  link.download = "item-import-problems.csv"
-  link.click()
-  URL.revokeObjectURL(url)
+// How one list imports: reads the file in the browser, then sends rows in batches.
+export type CsvImporter<Row> = {
+  // "items", "customers": used in messages.
+  entityPlural: string
+  // The name column in the report of rows not imported, e.g. "Item Name".
+  nameColumn: string
+  read: (content: string) => CsvReadResult<Row>
+  importBatch: (rows: Row[]) => Promise<ActionResult<CsvImportResult>>
+  batchSize: number
+  // Shown when every row went in, e.g. what the file has that isn't imported.
+  note?: string
 }
 
-// Imports a CSV of items (a Zoho Books item export works as it is) straight after the file
-// is picked: rows go to the server in batches. Rows matching an existing item (by Item ID,
-// or by SKU for items added in the app) are skipped, so importing a file again never
-// changes existing items.
-export function useItemImport() {
+// Runs an import right after a file is picked. Rows matching an existing record are
+// skipped by the server, so importing a file again never changes existing records.
+export function useCsvImport<Row>(importer: CsvImporter<Row>) {
   const router = useRouter()
-  const [state, setState] = useState<ItemImportState>({ stage: "idle" })
+  const [state, setState] = useState<CsvImportState>({ stage: "idle" })
 
   // Leaving the page would stop an import halfway.
   useEffect(() => {
@@ -96,9 +95,9 @@ export function useItemImport() {
     }
 
     setState({ stage: "reading", fileName })
-    let read: ReturnType<typeof readItemCsv>
+    let read: CsvReadResult<Row>
     try {
-      read = readItemCsv(await file.text())
+      read = importer.read(await file.text())
     } catch {
       return fail("The file couldn't be read. Make sure it is a CSV file.")
     }
@@ -109,18 +108,20 @@ export function useItemImport() {
     }
     if (read.rows.length === 0) {
       return fail(
-        read.totalRows === 0 ? "The file has no items in it." : "None of the rows could be imported.",
+        read.totalRows === 0
+          ? `The file has no ${importer.entityPlural} in it.`
+          : "None of the rows could be imported.",
         read.problems
       )
     }
 
     const rows = read.rows
     setState({ stage: "importing", fileName, done: 0, total: rows.length })
-    for (let start = 0; start < rows.length; start += ITEM_IMPORT_BATCH_SIZE) {
-      const batch = rows.slice(start, start + ITEM_IMPORT_BATCH_SIZE)
+    for (let start = 0; start < rows.length; start += importer.batchSize) {
+      const batch = rows.slice(start, start + importer.batchSize)
       let error: string | undefined
       try {
-        const result = await importItems(batch, "skip")
+        const result = await importer.importBatch(batch)
         if (result.success) {
           totals.created += result.data.created
           totals.updated += result.data.updated
@@ -155,13 +156,62 @@ export function useItemImport() {
   return { state, run, reset: () => setState({ stage: "idle" }) }
 }
 
+// A list's "⋯" menu with Import (opens the file picker straight away and imports on this
+// page) and Export (downloads a CSV from exportHref).
+export function CsvListActionsMenu<Row>({
+  entityLabel,
+  config,
+  canImport,
+  exportHref,
+  importer,
+}: {
+  entityLabel: string
+  config: ListConfig
+  canImport: boolean
+  exportHref: string
+  importer: CsvImporter<Row>
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const { state, run, reset } = useCsvImport(importer)
+
+  return (
+    <>
+      <ListActionsMenu
+        entityLabel={entityLabel}
+        config={config}
+        onImport={canImport ? () => inputRef.current?.click() : undefined}
+        exportHref={exportHref}
+      />
+      {canImport && (
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".csv,text/csv"
+          aria-label={`Choose a CSV file of ${importer.entityPlural} to import`}
+          className="sr-only"
+          tabIndex={-1}
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            // Cleared so picking the same file again still triggers an import.
+            event.target.value = ""
+            if (file) void run(file)
+          }}
+        />
+      )}
+      <CsvImportDialog state={state} onClose={reset} importer={importer} />
+    </>
+  )
+}
+
 // Progress and results of an import. Can't be closed while rows are being sent.
-export function ItemImportDialog({
+function CsvImportDialog<Row>({
   state,
   onClose,
+  importer,
 }: {
-  state: ItemImportState
+  state: CsvImportState
   onClose: () => void
+  importer: CsvImporter<Row>
 }) {
   const isBusy = state.stage === "reading" || state.stage === "importing"
 
@@ -170,7 +220,11 @@ export function ItemImportDialog({
       <DialogContent className="sm:max-w-2xl" showCloseButton={!isBusy}>
         <DialogHeader>
           <DialogTitle>
-            {isBusy ? "Importing items" : state.stage === "done" && state.error ? "Import stopped" : "Import finished"}
+            {isBusy
+              ? `Importing ${importer.entityPlural}`
+              : state.stage === "done" && state.error
+                ? "Import stopped"
+                : "Import finished"}
           </DialogTitle>
           {state.stage !== "idle" && <DialogDescription>{state.fileName}</DialogDescription>}
         </DialogHeader>
@@ -189,9 +243,9 @@ export function ItemImportDialog({
               aria-label="Import progress"
             />
             <p className="text-sm text-muted-foreground">
-              {numberFormat.format(state.done)} of {numberFormat.format(state.total)} items done (
-              {Math.round((state.done / state.total) * 100)}%). Keep this page open until the
-              import finishes.
+              {numberFormat.format(state.done)} of {numberFormat.format(state.total)}{" "}
+              {importer.entityPlural} done ({Math.round((state.done / state.total) * 100)}%).
+              Keep this page open until the import finishes.
             </p>
           </div>
         )}
@@ -210,12 +264,12 @@ export function ItemImportDialog({
               />
             </dl>
             {state.problems.length > 0 ? (
-              <ProblemsTable problems={state.problems} />
+              <ProblemsTable problems={state.problems} nameColumn={importer.nameColumn} />
             ) : (
               !state.error && (
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CircleCheck className="size-4 text-emerald-600" />
-                  No rows had problems. Stock levels in the file aren&apos;t imported.
+                  No rows had problems.{importer.note ? ` ${importer.note}` : ""}
                 </p>
               )
             )}
@@ -237,10 +291,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "wa
     <div className="flex flex-col gap-1 rounded-lg border p-3">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd
-        className={cn(
-          "text-xl font-semibold tabular-nums",
-          tone === "warning" && "text-amber-700"
-        )}
+        className={cn("text-xl font-semibold tabular-nums", tone === "warning" && "text-amber-700")}
       >
         {numberFormat.format(value)}
       </dd>
@@ -248,7 +299,20 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: "wa
   )
 }
 
-function ProblemsTable({ problems }: { problems: ImportProblem[] }) {
+function downloadReport(problems: ImportProblem[], nameColumn: string) {
+  const csv = toCsv([
+    ["Row", nameColumn, "Problem"],
+    ...problems.map((problem) => [problem.row, problem.name, problem.message]),
+  ])
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }))
+  const link = document.createElement("a")
+  link.href = url
+  link.download = "import-problems.csv"
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function ProblemsTable({ problems, nameColumn }: { problems: ImportProblem[]; nameColumn: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -256,7 +320,7 @@ function ProblemsTable({ problems }: { problems: ImportProblem[] }) {
           <TriangleAlert className="size-4 text-amber-600" />
           Rows not imported
         </h3>
-        <Button variant="outline" size="sm" onClick={() => downloadReport(problems)}>
+        <Button variant="outline" size="sm" onClick={() => downloadReport(problems, nameColumn)}>
           <Download />
           Download list
         </Button>
@@ -266,7 +330,7 @@ function ProblemsTable({ problems }: { problems: ImportProblem[] }) {
           <TableHeader className="sticky top-0 bg-muted">
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-16 px-3 text-xs uppercase">Row</TableHead>
-              <TableHead className="px-3 text-xs uppercase">Item Name</TableHead>
+              <TableHead className="px-3 text-xs uppercase">{nameColumn}</TableHead>
               <TableHead className="px-3 text-xs uppercase">Problem</TableHead>
             </TableRow>
           </TableHeader>

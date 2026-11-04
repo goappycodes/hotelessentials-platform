@@ -89,7 +89,8 @@ export const customerSchema = z
     const issue = (path: (string | number)[], message: string) =>
       context.addIssue({ code: "custom", path, message })
 
-    if (!customer.gstTreatment) issue(["gstTreatment"], "Pick a GST treatment")
+    // GST treatment and place of supply are optional (imported customers often have
+    // neither); a GSTIN is required only for treatments that need one.
     const needsGstin =
       customer.gstTreatment !== "" && !GST_TREATMENTS_WITHOUT_GSTIN.includes(customer.gstTreatment)
     if (customer.gstin && !GSTIN_PATTERN.test(customer.gstin)) {
@@ -99,9 +100,6 @@ export const customerSchema = z
     }
     if (customer.pan && !PAN_PATTERN.test(customer.pan)) {
       issue(["pan"], "Enter a 10-character PAN, e.g. AABCU9603R")
-    }
-    if (customer.gstTreatment && customer.gstTreatment !== "Overseas" && !customer.placeOfSupply) {
-      issue(["placeOfSupply"], "Pick the place of supply")
     }
     if (customer.taxPreference === "Tax Exempt" && !customer.exemptionReason) {
       issue(["exemptionReason"], "Enter why the customer is exempt from tax")

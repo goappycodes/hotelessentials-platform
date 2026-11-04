@@ -114,3 +114,6 @@ export const PAYMENT_TERMS = [
 ] as const
 
 export const DEFAULT_COUNTRY = "India"
+
+// Customer imports are sent to the server in batches of this many rows (and no more).
+export const CUSTOMER_IMPORT_BATCH_SIZE = 250

@@ -18,6 +18,8 @@ export const ROUTES = {
   inventoryAdjustmentsAdd: "/inventory/adjustments/add",
   customers: "/customers",
   customersAdd: "/customers/add",
+  // Route Handler: a CSV download (?scope=all or current-view, plus the list's filters).
+  customersExport: "/customers/export",
   quotations: "/quotations",
   quotationsAdd: "/quotations/add",
   salesOrders: "/sales-orders",

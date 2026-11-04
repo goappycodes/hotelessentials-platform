@@ -4,6 +4,7 @@ import type { PostgrestError } from "@supabase/supabase-js"
 import { z } from "zod"
 
 import { ITEM_IMPORT_BATCH_SIZE } from "@/constants/items"
+import type { CsvImportResult } from "@/lib/csv-import"
 import { hasAccess } from "@/lib/permissions"
 import { fetchSession } from "@/lib/session"
 import { getDatabaseErrorMessage } from "@/lib/supabase/database-errors"
@@ -22,13 +23,7 @@ const LOOKUP_CHUNK = 100
 
 const batchSchema = z.array(itemImportRowSchema).min(1).max(ITEM_IMPORT_BATCH_SIZE)
 
-export type ItemImportResult = {
-  created: number
-  updated: number
-  // Rows matching an existing item, left alone ("Skip duplicates").
-  skipped: number
-  failed: { row: number; name: string; message: string }[]
-}
+type ItemImportResult = CsvImportResult
 
 type Client = Awaited<ReturnType<typeof createClient>>
 

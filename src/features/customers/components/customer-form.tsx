@@ -66,6 +66,7 @@ import {
   PAYMENT_TERMS,
   SALUTATIONS,
 } from "@/constants/customers"
+import { COUNTRIES } from "@/constants/countries"
 import { ROUTES, customerRoute } from "@/constants/routes"
 import { EMPTY_CONTACT } from "@/features/customers/customer-input"
 import type { CustomerFormOptions } from "@/features/customers/queries"
@@ -80,10 +81,12 @@ import { cn } from "@/lib/utils"
 const NONE = "__none__"
 
 const STATE_OPTIONS = INDIAN_STATES.map((state) => ({ value: state.name, label: state.name }))
-const PLACE_OF_SUPPLY_OPTIONS = INDIAN_STATES.map((state) => ({
-  value: state.code,
-  label: `[${state.short}] ${state.name}`,
-}))
+// Both optional, so each list starts with "None" to clear the choice.
+const PLACE_OF_SUPPLY_OPTIONS = [
+  { value: "", label: "None" },
+  ...INDIAN_STATES.map((state) => ({ value: state.code, label: `[${state.short}] ${state.name}` })),
+]
+const GST_TREATMENT_OPTIONS = [{ value: "", label: "None" }, ...toSelectOptions(GST_TREATMENTS)]
 
 type CustomerFormProps = {
   options: CustomerFormOptions
@@ -398,15 +401,16 @@ function OtherDetails({ options, disabled }: { options: CustomerFormOptions; dis
 
   return (
     <FieldGroup className="max-w-2xl gap-4">
-      <FormSelectField
+      {/* Optional: imported customers often have no GST treatment. */}
+      <FormComboboxField
         control={control}
         name="gstTreatment"
         label="GST Treatment"
         orientation="horizontal"
-        required
         placeholder="Select a GST treatment"
+        searchPlaceholder="Search GST treatments"
         description={gstTreatment ? GST_TREATMENT_DESCRIPTIONS[gstTreatment] : undefined}
-        options={toSelectOptions(GST_TREATMENTS)}
+        options={GST_TREATMENT_OPTIONS}
         disabled={disabled}
       />
       {needsGstin && (
@@ -444,7 +448,6 @@ function OtherDetails({ options, disabled }: { options: CustomerFormOptions; dis
           name="placeOfSupply"
           label="Place of Supply"
           orientation="horizontal"
-          required
           hint="The customer's state. Same state as yours: CGST + SGST; another state: IGST."
           placeholder="Select a state"
           searchPlaceholder="Search states"
@@ -707,11 +710,12 @@ function AddressFields({
   disabled: boolean
   action?: React.ReactNode
 }) {
-  const { control, setValue } = useFormContext<CustomerInput>()
+  const { control } = useFormContext<CustomerInput>()
   const country = useWatch({ control, name: `${prefix}.country` })
   const isIndia = country.trim().toLowerCase() === DEFAULT_COUNTRY.toLowerCase()
+  // Every country, plus a saved one spelled differently (e.g. from an import).
   const countryOptions = toSelectOptions(
-    country && !isIndia ? [DEFAULT_COUNTRY, country] : [DEFAULT_COUNTRY]
+    country && !COUNTRIES.includes(country) ? [...COUNTRIES, country] : COUNTRIES
   )
 
   return (
@@ -733,13 +737,9 @@ function AddressFields({
           name={`${prefix}.country`}
           label="Country/Region"
           orientation="horizontal"
-          placeholder="Select or type a country"
-          searchPlaceholder="Search or type a country"
+          placeholder="Select a country"
+          searchPlaceholder="Search countries"
           options={countryOptions}
-          onCreate={(value) =>
-            setValue(`${prefix}.country`, value.slice(0, 60), { shouldDirty: true, shouldValidate: true })
-          }
-          createLabel={(value) => `Use “${value}”`}
           disabled={disabled}
         />
         <FormInputField
