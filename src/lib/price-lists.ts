@@ -2,6 +2,7 @@ import type {
   PercentageType,
   RoundOffType,
 } from "@/constants/price-lists"
+import { MONEY_DECIMALS } from "@/lib/format"
 
 export type PriceAdjustment = {
   percentageType: PercentageType
@@ -33,9 +34,10 @@ export function applyPriceAdjustment(baseRate: number, adjustment: PriceAdjustme
     case "0.49":
       return Math.floor(adjusted) + Number(adjustment.roundOffTo)
     case "Decimal Places":
-      return roundTo(adjusted, adjustment.decimalPlaces ?? 2)
+      return roundTo(adjusted, adjustment.decimalPlaces ?? MONEY_DECIMALS)
     default:
-      return roundTo(adjusted, 2)
+      // "Never mind": keep the precision amounts are stored with.
+      return roundTo(adjusted, MONEY_DECIMALS)
   }
 }
 

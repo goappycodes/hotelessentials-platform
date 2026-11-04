@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Truck,
   UsersRound,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react"
 
@@ -55,6 +56,18 @@ export const MODULE_NAV_ITEMS = {
     create: { href: ROUTES.priceListsAdd, title: "New Price List" },
     access: "price_lists",
     search: { placeholder: "Search price lists", scope: "price_lists" },
+  },
+  inventoryAdjustments: {
+    title: "Inventory Adjustments",
+    href: ROUTES.inventoryAdjustments,
+    icon: Warehouse,
+    description: "Add or remove stock, with a reason for every change.",
+    create: { href: ROUTES.inventoryAdjustmentsAdd, title: "New Adjustment" },
+    access: "inventory_adjustments",
+    search: {
+      placeholder: "Search adjustments by reason or reference",
+      scope: "inventory_adjustments",
+    },
   },
   quotations: {
     title: "Quotations",
@@ -128,6 +141,12 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
     icon: Package,
     items: [MODULE_NAV_ITEMS.items, MODULE_NAV_ITEMS.priceLists],
   },
+  // Inventory is switched off for now; uncomment to show it in the sidebar again.
+  // {
+  //   title: "Inventory",
+  //   icon: Warehouse,
+  //   items: [MODULE_NAV_ITEMS.inventoryAdjustments],
+  // },
   {
     title: "Sales",
     icon: ShoppingCart,

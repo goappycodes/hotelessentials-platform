@@ -19,7 +19,20 @@ import { useUpdateSearchParams } from "@/hooks/use-list-query"
 import { cn } from "@/lib/utils"
 import type { SearchResult } from "@/types/search"
 
-const SUGGEST_DEBOUNCE_MS = 250
+// A short pause after typing before asking the server (each request is a round trip).
+const SUGGEST_DEBOUNCE_MS = 150
+
+// Recent suggestions by module and term, so backspacing or typing a term again shows
+// them at once. Kept briefly, so edits made elsewhere show up soon.
+const SUGGESTION_CACHE_MS = 30_000
+const suggestionCache = new Map<string, { at: number; results: SearchResult[] }>()
+
+const cacheKey = (scope: string, term: string) => `${scope}:${term.toLowerCase()}`
+
+function getCachedSuggestions(scope: string, term: string) {
+  const cached = suggestionCache.get(cacheKey(scope, term))
+  return cached && Date.now() - cached.at < SUGGESTION_CACHE_MS ? cached.results : undefined
+}
 
 type InputRef = React.RefObject<HTMLInputElement | null>
 type ModuleWithSearch = NavItem & { search: NonNullable<NavItem["search"]> }
@@ -99,17 +112,19 @@ function ModuleSearch({
   const term = value.trim()
   const entity = title.toLowerCase()
   const isCurrent = suggestions?.term === term
-  const results = isCurrent ? suggestions.results : []
-  const isSearching = Boolean(term) && !isCurrent
+  const cached = term && !isCurrent ? getCachedSuggestions(search.scope, term) : undefined
+  const results = isCurrent ? suggestions.results : (cached ?? [])
+  const isSearching = Boolean(term) && !isCurrent && !cached
   // The last option, after the records: "Search all … for '…'".
   const searchAllIndex = results.length
 
   useEffect(() => {
-    if (!isOpen || !term) return
+    if (!isOpen || !term || getCachedSuggestions(search.scope, term)) return
     let cancelled = false
     const timer = setTimeout(async () => {
       try {
         const found = await searchRecords(search.scope, term)
+        suggestionCache.set(cacheKey(search.scope, term), { at: Date.now(), results: found })
         if (!cancelled) setSuggestions({ term, results: found, failed: false })
       } catch {
         if (!cancelled) setSuggestions({ term, results: [], failed: true })

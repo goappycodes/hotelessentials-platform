@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { createContext, Suspense, use, useEffect, useState } from "react"
+import { createContext, Suspense, use, useCallback, useEffect, useState } from "react"
 
 type PendingNavigation = { from: string; to: string }
 
@@ -37,7 +37,13 @@ export function NavigationProgressProvider({
     return () => document.removeEventListener("click", handleClick)
   }, [])
 
-  // Once the pathname moves on from where the navigation started, it has finished.
+  // A new pathname means the navigation finished: forget it, so coming back later to the
+  // page it started from doesn't bring the bar back.
+  const handlePathname = useCallback((next: string) => {
+    setPathname(next)
+    setPending(null)
+  }, [])
+
   const pendingPath = pending && pending.from === pathname ? pending.to : null
 
   return (
@@ -45,7 +51,7 @@ export function NavigationProgressProvider({
       {/* usePathname() needs <Suspense> on dynamic routes, so it is read in a child
           instead of here, where it would block prerendering of every page. */}
       <Suspense fallback={null}>
-        <PathnameTracker onChange={setPathname} />
+        <PathnameTracker onChange={handlePathname} />
       </Suspense>
       {pendingPath && (
         <div

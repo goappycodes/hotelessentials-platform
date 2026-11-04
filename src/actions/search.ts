@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 
+import { searchInventoryAdjustments } from "@/features/inventory-adjustments/search"
 import { searchItems } from "@/features/items/search"
 import { searchPriceLists } from "@/features/price-lists/search"
 import { searchUsers } from "@/features/users/search"
@@ -21,6 +22,7 @@ const PROVIDERS: Record<SearchScope, SearchProvider> = {
   users: { access: "admin", search: searchUsers },
   items: { access: "items", search: searchItems },
   price_lists: { access: "price_lists", search: searchPriceLists },
+  inventory_adjustments: { access: "inventory_adjustments", search: searchInventoryAdjustments },
   quotations: { access: "quotations" },
   sales_orders: { access: "sales_orders" },
   despatch: { access: "despatch" },
@@ -40,9 +42,17 @@ export async function searchRecords(
   const parsed = inputSchema.safeParse({ scope, term })
   if (!parsed.success) return []
 
-  const session = await fetchSession()
   const provider = PROVIDERS[parsed.data.scope]
+  // The session check and the search run at the same time (one round trip instead of
+  // two). The search runs as the user, so RLS limits what it can see, and its results
+  // are only returned once the check passes.
+  const [session, found] = await Promise.all([
+    fetchSession(),
+    Promise.allSettled([provider.search?.(parsed.data.term, SUGGESTION_LIMIT) ?? []]),
+  ])
   if (!session?.user.isActive || !hasAccess(session, provider.access)) return []
 
-  return provider.search?.(parsed.data.term, SUGGESTION_LIMIT) ?? []
+  const [result] = found
+  if (result.status === "rejected") throw result.reason
+  return result.value
 }

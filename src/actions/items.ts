@@ -9,6 +9,7 @@ import {
   MAX_ITEM_IMAGE_BYTES,
   MAX_ITEM_IMAGES,
 } from "@/constants/items"
+import { PAGE_SIZE_OPTIONS } from "@/constants/list"
 import type { PermissionAction } from "@/constants/permissions"
 import { ITEMS_LIST } from "@/features/items/list-config"
 import { getItemImages, type ItemImageView } from "@/features/items/queries"
@@ -28,6 +29,7 @@ import type { ActionResult } from "@/types/actions"
 import type { Tables } from "@/types/database"
 
 const INVALID_INPUT = "Please check the form and try again."
+const MAX_PAGE_SIZE = Math.max(...PAGE_SIZE_OPTIONS)
 const NOT_ALLOWED = "You don't have permission to do that."
 
 async function authorize(...actions: PermissionAction[]) {
@@ -56,17 +58,19 @@ function toItemRow(item: ItemInput) {
     // Taxes only apply to taxable items.
     intra_state_tax_id: item.taxPreference === "Taxable" ? item.intraStateTaxId || null : null,
     inter_state_tax_id: item.taxPreference === "Taxable" ? item.interStateTaxId || null : null,
-    track_inventory: item.trackInventory,
+    // Inventory settings are kept when tracking is off, so turning it back on restores them.
+    track_inventory: item.type === "Goods" && item.trackInventory,
+    inventory_account: item.inventoryAccount,
+    inventory_valuation_method: item.inventoryValuationMethod,
     is_active: item.isActive,
   }
 }
 
 function getItemErrorMessage(error: PostgrestError) {
-  if (error.code === "23505") return "Another item already uses this SKU."
-  if (error.message.includes("valid_hsn_for_goods")) return "Goods need an HSN code."
   if (error.message.includes("valid_taxes_for_taxable")) return "Taxable items need both taxes."
-  // Raised by the tax scope check on items; the message is written for users.
-  if (error.code === "23514" && error.message.startsWith("The ")) return error.message
+  if (error.message.includes("valid_inventory_for_goods")) return "Only goods can track inventory."
+  // Raised by the tax scope and inventory checks on items; the messages are written for users.
+  if (error.code === "23514" && /^(The |This item )/.test(error.message)) return error.message
   return getDatabaseErrorMessage(error)
 }
 
@@ -94,7 +98,7 @@ export async function saveItem(
 
 export async function createHsnCode(
   input: HsnCodeInput
-): Promise<ActionResult<{ id: string; code: string; description: string }>> {
+): Promise<ActionResult<{ id: string; code: string; description: string | null }>> {
   const parsed = hsnCodeSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: INVALID_INPUT }
   if (!(await authorize("create", "edit"))) return { success: false, error: NOT_ALLOWED }
@@ -238,22 +242,31 @@ export async function deleteItem(itemId: string): Promise<ActionResult> {
   if (!id.success) return { success: false, error: INVALID_INPUT }
   if (!(await authorize("delete"))) return { success: false, error: NOT_ALLOWED }
 
-  const supabase = await createClient()
+  return removeItem(await createClient(), id.data)
+}
+
+// Deletes one item and its images; the caller has already authorized the user.
+async function removeItem(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  itemId: string
+): Promise<ActionResult> {
   const { data: images } = await supabase
     .from("item_images")
     .select("storage_path")
-    .eq("item_id", id.data)
+    .eq("item_id", itemId)
 
   const { data, error } = await supabase
     .from("items")
     .delete()
-    .eq("id", id.data)
+    .eq("id", itemId)
     .select("id")
     .maybeSingle()
   if (error?.code === "23503") {
     return {
       success: false,
-      error: "This item is used in a price list, so it can't be deleted. Mark it as inactive instead.",
+      error: error.message.includes("inventory_adjustment_items")
+        ? "This item is used in an inventory adjustment, so it can't be deleted. Mark it as inactive instead."
+        : "This item is used in a price list, so it can't be deleted. Mark it as inactive instead.",
     }
   }
   if (error) return { success: false, error: getDatabaseErrorMessage(error) }
@@ -265,14 +278,96 @@ export async function deleteItem(itemId: string): Promise<ActionResult> {
   return { success: true, data: undefined }
 }
 
+// One adjusted inventory adjustment that changed this item's stock.
+// Items picked with the list checkboxes: at most one page.
+const itemIdsSchema = z.array(z.uuid()).min(1).max(MAX_PAGE_SIZE)
+
+export type BulkItemsResult = {
+  changed: number
+  // Items left as they were, e.g. locked ones, with the first reason.
+  skipped: number
+  skippedReason?: string
+}
+
+// Mark as Active / Mark as Inactive for the selected items. Locked items are skipped.
+export async function setItemsActive(
+  itemIds: string[],
+  isActive: boolean
+): Promise<ActionResult<BulkItemsResult>> {
+  const ids = itemIdsSchema.safeParse(itemIds)
+  if (!ids.success) return { success: false, error: INVALID_INPUT }
+  if (!(await authorize("edit"))) return { success: false, error: NOT_ALLOWED }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("items")
+    .update({ is_active: isActive === true })
+    .in("id", ids.data)
+    .eq("is_locked", false)
+    .select("id")
+  if (error) return { success: false, error: getDatabaseErrorMessage(error) }
+
+  const skipped = ids.data.length - data.length
+  return {
+    success: true,
+    data: {
+      changed: data.length,
+      skipped,
+      skippedReason: skipped ? "Locked items can't be changed." : undefined,
+    },
+  }
+}
+
+// Delete for the selected items, one at a time so an item that can't be deleted (locked,
+// or used in a price list) doesn't stop the others.
+export async function deleteItems(itemIds: string[]): Promise<ActionResult<BulkItemsResult>> {
+  const ids = itemIdsSchema.safeParse(itemIds)
+  if (!ids.success) return { success: false, error: INVALID_INPUT }
+  if (!(await authorize("delete"))) return { success: false, error: NOT_ALLOWED }
+
+  const supabase = await createClient()
+  let changed = 0
+  let skippedReason: string | undefined
+  for (const id of ids.data) {
+    const result = await removeItem(supabase, id)
+    if (result.success) changed += 1
+    else skippedReason ??= result.error
+  }
+  return {
+    success: true,
+    data: { changed, skipped: ids.data.length - changed, skippedReason },
+  }
+}
+
+export type ItemStockHistoryEntry = {
+  adjustmentId: string
+  date: string
+  reason: string
+  referenceNumber: string | null
+  quantityAdjusted: number
+}
+
 export type ItemDetailData = {
   item: Tables<"items">
-  hsnCode: { code: string; description: string } | null
+  hsnCode: { code: string; description: string | null } | null
   intraTax: TaxRate | null
   interTax: TaxRate | null
   images: ItemImageView[]
-  can: { create: boolean; edit: boolean; delete: boolean; lock: boolean }
+  // Null when the item doesn't track inventory.
+  stock: { onHand: number; history: ItemStockHistoryEntry[] } | null
+  can: {
+    create: boolean
+    edit: boolean
+    delete: boolean
+    lock: boolean
+    // Inventory adjustments: open them, and create one for this item.
+    viewAdjustments: boolean
+    adjustStock: boolean
+  }
 }
+
+// The latest adjustments shown in the panel's History tab.
+const STOCK_HISTORY_LIMIT = 50
 
 // Everything the side panel shows for one item. Null when it doesn't exist or the user
 // can't view items.
@@ -283,7 +378,7 @@ export async function getItemDetail(itemId: string): Promise<ItemDetailData | nu
   if (!session?.user.isActive || !hasAccess(session, "items")) return null
 
   const supabase = await createClient()
-  const [itemResult, images] = await Promise.all([
+  const [itemResult, images, stockResult, historyResult] = await Promise.all([
     supabase
       .from("items")
       // Taxes come in the same request as the item.
@@ -293,12 +388,28 @@ export async function getItemDetail(itemId: string): Promise<ItemDetailData | nu
       .eq("id", id.data)
       .maybeSingle(),
     getItemImages(supabase, id.data),
+    // Stock on hand is worked out by the item_list view, over all of the item's history.
+    supabase.from("item_list").select("stock_on_hand").eq("id", id.data).maybeSingle(),
+    // Adjusted adjustments that include this item (drafts don't change stock).
+    supabase
+      .from("inventory_adjustments")
+      .select(
+        "id, adjustment_date, reason, reference_number, lines:inventory_adjustment_items!inner(quantity_adjusted)"
+      )
+      .eq("lines.item_id", id.data)
+      .eq("status", "Adjusted")
+      .order("adjustment_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(STOCK_HISTORY_LIMIT),
   ])
-  if (itemResult.error) throw new Error("Failed to load the item")
+  if (itemResult.error || stockResult.error || historyResult.error) {
+    throw new Error("Failed to load the item")
+  }
   if (!itemResult.data) return null
 
   const { hsn_code: hsnCode, intra_tax: intraTax, inter_tax: interTax, ...item } =
     itemResult.data
+  const onHand = stockResult.data?.stock_on_hand
 
   return {
     item,
@@ -306,11 +417,27 @@ export async function getItemDetail(itemId: string): Promise<ItemDetailData | nu
     intraTax,
     interTax,
     images,
+    stock:
+      item.track_inventory && onHand !== null && onHand !== undefined
+        ? {
+            onHand,
+            history: historyResult.data.map((adjustment) => ({
+              adjustmentId: adjustment.id,
+              date: adjustment.adjustment_date,
+              reason: adjustment.reason,
+              referenceNumber: adjustment.reference_number,
+              // One line per item in an adjustment.
+              quantityAdjusted: adjustment.lines[0]?.quantity_adjusted ?? 0,
+            })),
+          }
+        : null,
     can: {
       create: hasAccess(session, "items", "create"),
       edit: hasAccess(session, "items", "edit"),
       delete: hasAccess(session, "items", "delete"),
       lock: isAdminRole(session.role),
+      viewAdjustments: hasAccess(session, "inventory_adjustments"),
+      adjustStock: hasAccess(session, "inventory_adjustments", "create"),
     },
   }
 }

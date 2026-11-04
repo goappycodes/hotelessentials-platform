@@ -23,11 +23,15 @@ export function toItemInput(item: Tables<"items">): ItemInput {
     intraStateTaxId: item.intra_state_tax_id ?? "",
     interStateTaxId: item.inter_state_tax_id ?? "",
     trackInventory: item.track_inventory,
+    inventoryAccount: item.inventory_account as ItemInput["inventoryAccount"],
+    inventoryValuationMethod: item.inventory_valuation_method,
     isActive: item.is_active,
   }
 }
 
-// A clone keeps everything except the SKU (SKUs are unique) and starts active.
+// A clone keeps everything except the SKU (a copy is usually a different product, with
+// its own code) and starts active. Stock is
+// never copied: it comes from inventory adjustments.
 export function toClonedItemInput(item: Tables<"items">): ItemInput {
   return { ...toItemInput(item), sku: "", isActive: true }
 }

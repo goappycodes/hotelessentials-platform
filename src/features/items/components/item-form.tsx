@@ -13,12 +13,13 @@ import { FormComboboxField } from "@/components/shared/form-combobox-field"
 import { FormError } from "@/components/shared/form-error"
 import {
   FieldHint,
-  FormFieldLabel,
+  // FormFieldLabel, // for the hidden Type field
   HORIZONTAL_FIELD_CLASS,
 } from "@/components/shared/form-field-label"
 import { FormInputField } from "@/components/shared/form-input-field"
 import { FormSelectField, toSelectOptions } from "@/components/shared/form-select-field"
-import { FormTextareaField } from "@/components/shared/form-textarea-field"
+// For the hidden sales and purchase descriptions.
+// import { FormTextareaField } from "@/components/shared/form-textarea-field"
 import { SubmitButton } from "@/components/shared/submit-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -31,14 +32,18 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+// For the hidden Type field.
+// import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  ITEM_TYPES,
+  // Inventory is switched off for now; uncomment with the inventory fields.
+  // INVENTORY_ACCOUNTS,
+  // INVENTORY_VALUATION_METHODS,
+  // ITEM_TYPES, // for the hidden Type field
   ITEM_UNITS,
-  PURCHASE_ACCOUNTS,
-  SALES_ACCOUNTS,
+  // PURCHASE_ACCOUNTS, // for the hidden purchase account
+  // SALES_ACCOUNTS, // for the hidden sales account
   TAX_PREFERENCES,
 } from "@/constants/items"
 import { ROUTES, itemRoute } from "@/constants/routes"
@@ -48,6 +53,7 @@ import {
   uploadItemImages,
   type PendingImage,
 } from "@/features/items/components/item-images-field"
+import { invalidateItemDetail } from "@/features/items/item-detail-cache"
 import type { ItemImageView } from "@/features/items/queries"
 import { formatTaxName, type TaxRate } from "@/features/taxes/tax-rates"
 import { itemSchema, type ItemInput } from "@/lib/validations/item"
@@ -71,6 +77,8 @@ export const NEW_ITEM: ItemInput = {
   intraStateTaxId: "",
   interStateTaxId: "",
   trackInventory: false,
+  inventoryAccount: "Inventory Asset",
+  inventoryValuationMethod: "FIFO (First In, First Out)",
   isActive: true,
 }
 
@@ -88,12 +96,15 @@ type ItemFormProps = {
       // Users who can view but not edit items, or a locked item: read-only.
       readOnly: boolean
       isLocked: boolean
+      // The item is in inventory adjustments, so tracking can't be switched off.
+      hasStockHistory: boolean
     }
 )
 
 export function ItemForm(props: ItemFormProps) {
   const { mode } = props
   const readOnly = mode === "edit" && props.readOnly
+  const hasStockHistory = mode === "edit" && props.hasStockHistory
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string>()
@@ -114,18 +125,29 @@ export function ItemForm(props: ItemFormProps) {
             interStateTaxId: getDefaultTaxId(props.taxRates, "Inter-state"),
           },
   })
-  const [salesEnabled, purchaseEnabled, taxPreference, intraStateTaxId, interStateTaxId, unit] =
-    useWatch({
-      control: form.control,
-      name: [
-        "salesEnabled",
-        "purchaseEnabled",
-        "taxPreference",
-        "intraStateTaxId",
-        "interStateTaxId",
-        "unit",
-      ],
-    })
+  const [
+    type,
+    salesEnabled,
+    purchaseEnabled,
+    taxPreference,
+    intraStateTaxId,
+    interStateTaxId,
+    unit,
+    // Inventory is switched off for now; uncomment with the inventory fields below.
+    // trackInventory,
+  ] = useWatch({
+    control: form.control,
+    name: [
+      "type",
+      "salesEnabled",
+      "purchaseEnabled",
+      "taxPreference",
+      "intraStateTaxId",
+      "interStateTaxId",
+      "unit",
+      // "trackInventory",
+    ],
+  })
   // Common units, plus a custom one the user typed.
   const unitOptions = toSelectOptions(
     unit && !ITEM_UNITS.includes(unit) ? [...ITEM_UNITS, unit] : ITEM_UNITS
@@ -154,6 +176,8 @@ export function ItemForm(props: ItemFormProps) {
         setError(result.error)
         return
       }
+      // The opened-item panel caches details briefly; drop them so it shows this save.
+      invalidateItemDetail(result.data.id)
 
       if (pendingImages.length) {
         try {
@@ -198,6 +222,8 @@ export function ItemForm(props: ItemFormProps) {
                   autoComplete="off"
                   autoFocus={mode === "create"}
                 />
+                {/* Type is hidden for now: new items are always Goods (NEW_ITEM). Uncomment
+                    to let users pick Goods or Service again (and the imports marked for it).
                 <Controller
                   control={form.control}
                   name="type"
@@ -226,6 +252,7 @@ export function ItemForm(props: ItemFormProps) {
                     </Field>
                   )}
                 />
+                */}
                 <div className="max-w-[28rem]">
                   <FormComboboxField
                     control={form.control}
@@ -249,7 +276,7 @@ export function ItemForm(props: ItemFormProps) {
                     name="sku"
                     label="SKU"
                     orientation="horizontal"
-                    hint="Stock Keeping Unit: your own unique code for this item."
+                    hint="Stock Keeping Unit: your own code for this item."
                     autoComplete="off"
                   />
                 </div>
@@ -297,6 +324,8 @@ export function ItemForm(props: ItemFormProps) {
                 startAddon="INR"
                 inputMode="decimal"
               />
+              {/* Account and description are hidden for now; new items keep the default
+                  account (Sales). Uncomment to show them again.
               <FormSelectField
                 control={form.control}
                 name="salesAccount"
@@ -313,6 +342,7 @@ export function ItemForm(props: ItemFormProps) {
                 orientation="horizontal"
                 rows={2}
               />
+              */}
             </fieldset>
           </FormSection>
 
@@ -332,6 +362,8 @@ export function ItemForm(props: ItemFormProps) {
                 startAddon="INR"
                 inputMode="decimal"
               />
+              {/* Account and description are hidden for now; new items keep the default
+                  account (Cost of Goods Sold). Uncomment to show them again.
               <FormSelectField
                 control={form.control}
                 name="purchaseAccount"
@@ -348,6 +380,8 @@ export function ItemForm(props: ItemFormProps) {
                 orientation="horizontal"
                 rows={2}
               />
+              */}
+              {/* Preferred vendor is hidden for now. Uncomment to show it again.
               <FormInputField
                 control={form.control}
                 name="preferredVendor"
@@ -355,6 +389,7 @@ export function ItemForm(props: ItemFormProps) {
                 orientation="horizontal"
                 autoComplete="off"
               />
+              */}
             </fieldset>
           </FormSection>
 
@@ -417,15 +452,47 @@ export function ItemForm(props: ItemFormProps) {
             )}
           </FormSection>
 
-          <FormSection>
-            <SectionCheckbox
-              name="trackInventory"
-              label="Track Inventory for this item"
-              hint="Keep a running count of stock for this item."
-              description="Stock levels update as you record sales and purchases of this item."
-              disabled={readOnly || isPending}
-            />
-          </FormSection>
+          {/* Only goods have stock, so services don't get this section (like Zoho). */}
+          {type === "Goods" && (
+            <FormSection>
+              <SectionCheckbox
+                name="trackInventory"
+                label="Track Inventory for this item"
+                hint="Keep a running count of stock for this item."
+                // Inventory is switched off for now; uncomment when it opens again.
+                // description="You cannot enable/disable inventory tracking once you've created transactions for this item"
+                disabled={readOnly || isPending || hasStockHistory}
+              />
+              {/* Inventory is switched off for now; uncomment when it opens again (also
+                  trackInventory in useWatch and the INVENTORY_* imports above).
+              {trackInventory && (
+                <div className="grid gap-x-10 gap-y-4 lg:grid-cols-2">
+                  <FormComboboxField
+                    control={form.control}
+                    name="inventoryAccount"
+                    label="Inventory Account"
+                    orientation="horizontal"
+                    required
+                    groupLabel="Stock"
+                    placeholder="Select an account"
+                    options={toSelectOptions(INVENTORY_ACCOUNTS)}
+                    disabled={readOnly || isPending}
+                  />
+                  <FormSelectField
+                    control={form.control}
+                    name="inventoryValuationMethod"
+                    label="Inventory Valuation Method"
+                    orientation="horizontal"
+                    required
+                    hint="How the cost of stock sold is worked out: FIFO uses the oldest purchase cost first, WAC the average cost."
+                    options={toSelectOptions(INVENTORY_VALUATION_METHODS)}
+                    disabled={readOnly || isPending}
+                  />
+                </div>
+              )}
+              */}
+            </FormSection>
+          )}
 
           {mode === "edit" && (
             <FormSection>

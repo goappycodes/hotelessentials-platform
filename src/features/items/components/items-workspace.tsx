@@ -4,16 +4,16 @@ import { Ellipsis, ImageIcon, Package, Plus } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Suspense, useCallback } from "react"
+import { Suspense, useCallback, useState } from "react"
 
 import { countItems } from "@/actions/items"
 import { PageContainer } from "@/components/layout/page-container"
-import { ListActionsMenu } from "@/components/shared/list-actions-menu"
 import { ListFilterMenu } from "@/components/shared/list-filter-menu"
 import { ListPagination } from "@/components/shared/list-pagination"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
   EmptyDescription,
@@ -31,13 +31,18 @@ import {
 } from "@/components/ui/table"
 import { MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { ITEM_PARAM } from "@/constants/routes"
-import { ItemPanel, prefetchItemDetail } from "@/features/items/components/item-panel"
+import { ItemPanel } from "@/features/items/components/item-panel"
+import { ItemsActionsMenu } from "@/features/items/components/items-actions-menu"
+import { ItemsBulkActions } from "@/features/items/components/items-bulk-actions"
+// Hovering a row starts loading its details, so the click feels instant.
+import { prefetchItemDetail } from "@/features/items/item-detail-cache"
 import {
   ITEM_STATUS_FILTER_OPTIONS,
-  ITEM_TYPE_FILTER_OPTIONS,
+  // ITEM_TYPE_FILTER_OPTIONS, // for the hidden Type filter
   ITEMS_LIST,
 } from "@/features/items/list-config"
-import { formatCurrency } from "@/lib/format"
+// formatQuantity is for the Stock on Hand column, switched off for now.
+import { formatCurrency /* , formatQuantity */ } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 const navItem = MODULE_NAV_ITEMS.items
@@ -48,6 +53,9 @@ export type ItemRow = {
   sku: string | null
   type: string
   hsnCode: string | null
+  unit: string | null
+  // Null when the item doesn't track inventory.
+  stockOnHand: number | null
   sellingPrice: number
   costPrice: number
   salesEnabled: boolean
@@ -59,8 +67,11 @@ export type ItemRow = {
 const COLUMNS = [
   { label: "Name" },
   { label: "SKU" },
-  { label: "Type" },
+  // Type is hidden for now; uncomment with the Type cell below.
+  // { label: "Type" },
   { label: "HSN" },
+  // Inventory is switched off for now; uncomment with the Stock on Hand cell below.
+  // { label: "Stock on Hand", numeric: true },
   { label: "Rate", numeric: true },
   { label: "Purchase Rate", numeric: true },
   { label: "Status" },
@@ -71,6 +82,9 @@ type ItemsWorkspaceProps = {
   hasNextPage: boolean
   isFiltered: boolean
   canCreate: boolean
+  // Bulk actions on items picked with the checkboxes.
+  canEdit: boolean
+  canDelete: boolean
   // The page title and actions shown above the full list.
   header: React.ReactNode
 }
@@ -82,12 +96,25 @@ export function ItemsWorkspace({
   hasNextPage,
   isFiltered,
   canCreate,
+  canEdit,
+  canDelete,
   header,
 }: ItemsWorkspaceProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const openId = searchParams.get(ITEM_PARAM)
+  const [checkedIds, setCheckedIds] = useState<string[]>([])
+  // Only items on this page count, so changing page, filters or search drops the rest.
+  const selectedIds = checkedIds.filter((id) => rows.some((item) => item.id === id))
+  const canSelect = canEdit || canDelete
+  const allSelected = rows.length > 0 && selectedIds.length === rows.length
+
+  function toggle(itemId: string, checked: boolean) {
+    setCheckedIds((ids) => (checked ? [...ids, itemId] : ids.filter((id) => id !== itemId)))
+  }
+
+  const clearSelection = useCallback(() => setCheckedIds([]), [])
 
   function hrefFor(itemId: string | null) {
     const params = new URLSearchParams(searchParams)
@@ -131,7 +158,7 @@ export function ItemsWorkspace({
                 </Button>
               }
             >
-              <ListActionsMenu entityLabel={navItem.title} config={ITEMS_LIST} />
+              <ItemsActionsMenu entityLabel={navItem.title} canImport={canCreate} />
             </Suspense>
           </div>
           <nav aria-label="Items" className="min-h-0 flex-1 overflow-y-auto">
@@ -187,14 +214,27 @@ export function ItemsWorkspace({
 
   return (
     <PageContainer>
-      {header}
+      {/* With items checked, Zoho's bulk actions bar takes the header's place. */}
+      {selectedIds.length > 0 ? (
+        <ItemsBulkActions
+          selectedIds={selectedIds}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          onClear={clearSelection}
+          onChanged={refreshList}
+        />
+      ) : (
+        header
+      )}
       <div className="flex flex-wrap gap-2">
+        {/* Type is hidden for now (every new item is Goods). Uncomment to filter by it again.
         <ListFilterMenu
           config={ITEMS_LIST}
           filterKey="type"
           label="Type"
           options={ITEM_TYPE_FILTER_OPTIONS}
         />
+        */}
         <ListFilterMenu
           config={ITEMS_LIST}
           filterKey="is_active"
@@ -221,6 +261,17 @@ export function ItemsWorkspace({
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
+                {canSelect && (
+                  <TableHead className="w-10 pr-0 pl-4">
+                    <Checkbox
+                      aria-label="Select all items on this page"
+                      checked={allSelected ? true : selectedIds.length > 0 ? "indeterminate" : false}
+                      onCheckedChange={(checked) =>
+                        setCheckedIds(checked === true ? rows.map((item) => item.id) : [])
+                      }
+                    />
+                  </TableHead>
+                )}
                 {COLUMNS.map((column) => (
                   <TableHead
                     key={column.label}
@@ -236,7 +287,22 @@ export function ItemsWorkspace({
             </TableHeader>
             <TableBody>
               {rows.map((item) => (
-                <TableRow key={item.id} className="relative">
+                <TableRow
+                  key={item.id}
+                  className="relative"
+                  data-state={selectedIds.includes(item.id) ? "selected" : undefined}
+                >
+                  {canSelect && (
+                    // Just above the row-wide link (z-1), so ticking doesn't open the item,
+                    // but below the sticky header and its search dropdown (z-10).
+                    <TableCell className="relative z-[1] w-10 pr-0 pl-4">
+                      <Checkbox
+                        aria-label={`Select ${item.name}`}
+                        checked={selectedIds.includes(item.id)}
+                        onCheckedChange={(checked) => toggle(item.id, checked === true)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="px-4 py-3">
                     {/* The link covers the whole row, so any cell opens the item. */}
                     <a
@@ -264,10 +330,17 @@ export function ItemsWorkspace({
                     </a>
                   </TableCell>
                   <TableCell className="px-4 text-muted-foreground">{item.sku ?? "—"}</TableCell>
+                  {/* Type is hidden for now; uncomment with the column above.
                   <TableCell className="px-4">{item.type}</TableCell>
+                  */}
                   <TableCell className="px-4 text-muted-foreground">
                     {item.hsnCode ?? "—"}
                   </TableCell>
+                  {/* Inventory is switched off for now; uncomment with the column above.
+                  <TableCell className="px-4 text-right tabular-nums">
+                    {item.stockOnHand === null ? "—" : formatQuantity(item.stockOnHand, item.unit)}
+                  </TableCell>
+                  */}
                   <TableCell className="px-4 text-right tabular-nums">
                     {item.salesEnabled ? formatCurrency(item.sellingPrice) : "—"}
                   </TableCell>

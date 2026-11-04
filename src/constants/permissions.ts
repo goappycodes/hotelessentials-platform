@@ -36,6 +36,7 @@ export const ADMIN_ROLES: readonly UserRole[] = ["owner", "admin"]
 export const APP_MODULES = [
   "items",
   "price_lists",
+  "inventory_adjustments",
   "quotations",
   "sales_orders",
   "despatch",
@@ -47,6 +48,7 @@ export type AppModule = (typeof APP_MODULES)[number]
 export const MODULE_LABELS: Record<AppModule, string> = {
   items: "Items",
   price_lists: "Price Lists",
+  inventory_adjustments: "Inventory Adjustments",
   quotations: "Quotations",
   sales_orders: "Sales Orders",
   despatch: "Despatch",
@@ -68,6 +70,7 @@ export const PERMISSION_ACTION_LABELS: Record<PermissionAction, string> = {
 export const MODULE_ACTIONS: Record<AppModule, readonly PermissionAction[]> = {
   items: PERMISSION_ACTIONS,
   price_lists: PERMISSION_ACTIONS,
+  inventory_adjustments: PERMISSION_ACTIONS,
   quotations: PERMISSION_ACTIONS,
   sales_orders: PERMISSION_ACTIONS,
   despatch: PERMISSION_ACTIONS,
@@ -87,6 +90,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
   manager: {
     items: ALL_ACTIONS,
     price_lists: ALL_ACTIONS,
+    inventory_adjustments: ALL_ACTIONS,
     quotations: ALL_ACTIONS,
     sales_orders: ALL_ACTIONS,
     despatch: ALL_ACTIONS,
@@ -95,6 +99,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
   accountant: {
     items: ["view"],
     price_lists: ALL_ACTIONS,
+    inventory_adjustments: ["view"],
     quotations: ["view"],
     sales_orders: ["view"],
     despatch: ["view"],
@@ -109,6 +114,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<
   },
   staff: {
     items: ["view"],
+    inventory_adjustments: VIEW_CREATE_EDIT,
     despatch: VIEW_CREATE_EDIT,
   },
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronLeft, ChevronRight, Settings } from "lucide-react"
-import { useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,16 @@ export function ListPagination({
 }: ListPaginationProps) {
   const { query, isPending, setPage, setPerPage } = useListQuery(config)
   const firstRow = (query.page - 1) * query.perPage
+
+  // Once another page has loaded (the URL's page changes after the new rows render),
+  // glide back to the top so the list starts from its first row.
+  const shownPage = useRef(query.page)
+  useEffect(() => {
+    if (shownPage.current === query.page) return
+    shownPage.current = query.page
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" })
+  }, [query.page])
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm">

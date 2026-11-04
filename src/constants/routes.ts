@@ -10,8 +10,12 @@ export const ROUTES = {
   dashboard: "/dashboard",
   items: "/items",
   itemsAdd: "/items/add",
+  // Route Handler: a CSV download (?scope=all or current-view, plus the list's filters).
+  itemsExport: "/items/export",
   priceLists: "/price-lists",
   priceListsAdd: "/price-lists/add",
+  inventoryAdjustments: "/inventory/adjustments",
+  inventoryAdjustmentsAdd: "/inventory/adjustments/add",
   quotations: "/quotations",
   quotationsAdd: "/quotations/add",
   salesOrders: "/sales-orders",
@@ -42,6 +46,15 @@ export function itemEditRoute(id: string) {
 
 export function priceListRoute(id: string) {
   return `${ROUTES.priceLists}/${id}`
+}
+
+export function inventoryAdjustmentRoute(id: string) {
+  return `${ROUTES.inventoryAdjustments}/${id}`
+}
+
+// A new adjustment that starts with this item in its table (Adjust Stock on an item).
+export function newAdjustmentForItemRoute(itemId: string) {
+  return `${ROUTES.inventoryAdjustmentsAdd}?${ITEM_PARAM}=${itemId}`
 }
 
 export function taxRoute(id: string) {

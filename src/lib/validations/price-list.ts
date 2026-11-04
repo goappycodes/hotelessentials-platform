@@ -26,11 +26,12 @@ export const priceListSchema = z
   .superRefine((list, context) => {
     if (list.priceListType === "All Items") {
       const value = list.percentageValue
-      if (!/^\d{1,8}(\.\d{1,2})?$/.test(value)) {
+      // numeric(10, 4): up to 6 digits before the point and 4 after.
+      if (!/^\d{1,6}(\.\d{1,4})?$/.test(value)) {
         context.addIssue({
           code: "custom",
           path: ["percentageValue"],
-          message: "Enter a percentage like 10 or 12.5",
+          message: "Enter a percentage like 10, 12.5 or 7.125 (up to 4 decimals)",
         })
       } else if (list.percentageType === "Markdown" && Number(value) > 100) {
         context.addIssue({
@@ -54,7 +55,7 @@ export const priceListSchema = z
       context.addIssue({
         code: "custom",
         path: ["itemRates"],
-        message: "Custom rates must be amounts like 1200 or 99.50",
+        message: "Custom rates must be amounts like 1200, 99.50 or 99.982 (up to 4 decimals)",
       })
     }
   })

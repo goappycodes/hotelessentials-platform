@@ -31,6 +31,9 @@ export function ItemImagesGallery({ images }: { images: ItemImageView[] }) {
           fill
           unoptimized
           sizes="256px"
+          // The biggest thing in the opened item (its Largest Contentful Paint), so it
+          // loads straight away instead of lazily.
+          loading="eager"
           className="object-contain"
         />
       </div>

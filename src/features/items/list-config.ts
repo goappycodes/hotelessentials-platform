@@ -6,6 +6,8 @@ export const ITEMS_LIST: ListConfig = {
     { value: "name", label: "Name" },
     { value: "sku", label: "SKU" },
     { value: "hsn_code", label: "HSN Code" },
+    // Inventory is switched off for now; uncomment to sort by stock again.
+    // { value: "stock_on_hand", label: "Stock on Hand" },
     { value: "selling_price", label: "Rate" },
     { value: "cost_price", label: "Purchase Rate" },
     { value: "created_at", label: "Created Time" },

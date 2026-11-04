@@ -11,7 +11,12 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { hsnCodeSchema, type ItemInput } from "@/lib/validations/item"
 
-export type HsnCode = { id: string; code: string; description: string }
+// description is null for codes added by an import.
+export type HsnCode = { id: string; code: string; description: string | null }
+
+export function formatHsnCode(hsn: Pick<HsnCode, "code" | "description">) {
+  return hsn.description ? `${hsn.code} · ${hsn.description}` : hsn.code
+}
 
 type HsnCodeFieldProps = {
   hsnCodes: HsnCode[]
@@ -64,13 +69,13 @@ export function HsnCodeField({ hsnCodes, onCreated, disabled }: HsnCodeFieldProp
         name="hsnCodeId"
         label="HSN Code"
         orientation="horizontal"
-        required={type === "Goods"}
-        hint={type === "Service" ? "Optional for services (SAC code)." : "Required for goods."}
+        hint={
+          type === "Service"
+            ? "The SAC code for this service."
+            : "The HSN code printed on GST invoices for this item."
+        }
         placeholder="Type to add or search"
-        options={hsnCodes.map((hsn) => ({
-          value: hsn.id,
-          label: `${hsn.code} · ${hsn.description}`,
-        }))}
+        options={hsnCodes.map((hsn) => ({ value: hsn.id, label: formatHsnCode(hsn) }))}
         onCreate={startAdding}
         createLabel={(search) => `Add HSN code “${search}”`}
         disabled={disabled}

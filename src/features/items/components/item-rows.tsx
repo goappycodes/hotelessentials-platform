@@ -12,7 +12,8 @@ import {
 } from "@/lib/list-query"
 import { createRequestClient } from "@/lib/supabase/server"
 
-const COLUMNS = ["Name", "SKU", "Type", "HSN", "Rate", "Purchase Rate", "Status"]
+// "Type" goes after "SKU" and "Stock on Hand" after "HSN" when they are switched on again.
+const COLUMNS = ["Name", "SKU", "HSN", "Rate", "Purchase Rate", "Status"]
 
 // One page of the items list (sort, filters, search and page from the URL).
 export async function getItemRows(searchParams: ListSearchParams) {
@@ -23,7 +24,7 @@ export async function getItemRows(searchParams: ListSearchParams) {
     supabase
       .from("item_list")
       .select(
-        "id, name, sku, type, selling_price, cost_price, sales_enabled, purchase_enabled, is_active, hsn_code"
+        "id, name, sku, type, unit, selling_price, cost_price, sales_enabled, purchase_enabled, is_active, hsn_code, stock_on_hand"
       ),
     query
   )
@@ -42,6 +43,8 @@ export async function getItemRows(searchParams: ListSearchParams) {
         sku: item.sku,
         type: item.type,
         hsnCode: item.hsn_code,
+        unit: item.unit,
+        stockOnHand: item.stock_on_hand,
         sellingPrice: item.selling_price,
         costPrice: item.cost_price,
         salesEnabled: item.sales_enabled,
@@ -65,6 +68,7 @@ export function ItemsTableSkeleton() {
         </div>
         {Array.from({ length: 6 }, (_, index) => (
           <div key={index} className="flex items-center gap-3 border-b px-4 py-3">
+            <Skeleton className="size-4 rounded-sm" />
             <Skeleton className="size-9 rounded-md" />
             <Skeleton className="h-4 w-48" />
             <Skeleton className="ml-auto h-4 w-20" />

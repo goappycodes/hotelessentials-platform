@@ -113,6 +113,9 @@ They create:
   GST 0/5/12/18/28% slabs. Items reference their two taxes.
 - Price lists: `price_lists`, `price_list_items`, and `public.save_price_list(...)`, which
   saves a list and its item rates in one transaction.
+- Inventory: `inventory_adjustments`, `inventory_adjustment_items` and
+  `public.save_inventory_adjustment(...)`; the `item_list` view adds each item's stock on
+  hand.
 
 ### 2. Configure authentication
 
@@ -288,29 +291,67 @@ tables are not counted on every page load. Render the component that awaits
 
 ## Items
 
-`/items` lists items with a thumbnail, SKU, type, HSN code, rates and status (filters: type,
+`/items` lists items with a thumbnail, SKU, type, HSN code, stock on hand, rates and status (filters: type,
 status; header search: name, SKU or HSN code, through the `item_list` view that joins each
 item's HSN code). Clicking an item opens it on the same page
 (`/items?item=<id>`): the list narrows to the left and the item shows on the right with
-Overview, Transactions and History tabs. Its header has Edit (`/items/<id>/edit`), Adjust
-Stock (disabled until there is an Inventory module) and More: Clone Item (opens New Item
+Overview, Transactions and History tabs (History lists the item's inventory adjustments).
+Its header has Edit (`/items/<id>/edit`), Adjust Stock (opens a new inventory adjustment
+with the item filled in) and More: Clone Item (opens New Item
 prefilled, SKU cleared), Mark as Inactive/Active, Delete (with confirmation) and Lock item.
 A locked item can't be edited or deleted until an owner or admin unlocks it; the database
 enforces this.
 
 The item form follows Zoho:
 
-- **Details**: name, type (goods or service), unit (pick or type your own), SKU (unique,
-  ignoring case), HSN code and tax preference. Goods need an HSN code; new HSN codes can be
-  added from the search box ("Add HSN code …").
+- **Details**: name, type (goods or service), unit (pick or type your own), SKU (may be
+  shared by several items, as in Zoho), HSN code (optional) and tax preference. New HSN
+  codes can be added from the search box ("Add HSN code …").
 - **Images**: up to 5 per item, dragged in or browsed. New images upload when the item is
   saved; removing a saved image deletes it straight away.
 - **Sales / purchase information**: selling and cost price, account, description,
   preferred vendor. Either side can be switched off.
 - **Default tax rates**: taxable items pick an intra-state tax and an inter-state tax from
   Settings → Taxes.
+- **Track Inventory** (goods only): the inventory account and valuation method (FIFO or
+  WAC). Once the item is in an inventory adjustment, tracking can't be turned off.
 
-An item used in a price list cannot be deleted; mark it inactive instead.
+An item used in a price list or an inventory adjustment cannot be deleted; mark it
+inactive instead.
+
+### Import and export
+
+Items use Zoho Books' item CSV format (`src/features/items/item-csv.ts`), so a Zoho export
+imports as it is and our exports can be imported again.
+
+- **Import** (⋯ menu → Import → Import Items) opens the file picker and imports the chosen
+  CSV straight away, in batches of `ITEM_IMPORT_BATCH_SIZE` rows (Server Action
+  `importItems`), with a progress dialog and a list of rows that couldn't be imported
+  (downloadable). Only the "Item Name" column is required. Rows matching an existing item
+  by Item ID (`items.external_id`, or our own ID) are skipped; rows without a matching
+  Item ID are matched by SKU only against items added in the app, since imported items
+  can share a SKU. HSN codes that don't
+  exist yet are added without a description; the 8-digit `CF.Full HSN Code` is used when
+  present, otherwise `HSN/SAC`. Taxes are matched by name (e.g. GST18 / IGST18). Stock
+  levels aren't imported.
+- **Export** (⋯ menu → Export) downloads every item, or the current view (its search,
+  filters and sort), from the `/items/export` Route Handler.
+
+## Inventory adjustments
+
+Stock changes only through **Inventory → Inventory Adjustments** (`/inventory/adjustments`,
+module permission `inventory_adjustments`), like Zoho. An adjustment has a date, account,
+reason (pick or type), optional reference number and description, and an item table: pick
+an item, see the quantity available, and type either the new quantity on hand or the
+quantity adjusted (`+10`, `-10`). Only active goods that track inventory can be picked.
+
+- **Save as Draft** keeps it without changing stock; **Convert to Adjusted** applies it.
+  An adjusted adjustment can be edited (stock updates again) or deleted (its change is
+  reversed), but not turned back into a draft.
+- Stock on hand is the sum of all adjusted lines for the item. The database refuses any
+  save or delete that would take an item below zero (checked when the transaction
+  commits, with the item rows locked).
+- Value adjustments are shown but not available yet; they need stock valuation.
 
 ## Taxes
 

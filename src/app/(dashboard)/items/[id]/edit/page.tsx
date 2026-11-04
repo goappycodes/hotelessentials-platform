@@ -64,13 +64,17 @@ async function EditItem({ params }: Pick<PageProps<"/items/[id]/edit">, "params"
   if (!z.uuid().safeParse(id).success) notFound()
 
   const supabase = await createRequestClient()
-  const [itemResult, hsnCodes, taxRates, images] = await Promise.all([
+  const [itemResult, hsnCodes, taxRates, images, historyResult] = await Promise.all([
     supabase.from("items").select("*").eq("id", id).maybeSingle(),
     getHsnCodes(supabase),
     getTaxRates(supabase),
     getItemImages(supabase, id),
+    supabase
+      .from("inventory_adjustment_items")
+      .select("id", { count: "exact", head: true })
+      .eq("item_id", id),
   ])
-  if (itemResult.error) throw new Error("Failed to load the item")
+  if (itemResult.error || historyResult.error) throw new Error("Failed to load the item")
 
   const item = itemResult.data
   if (!item) notFound()
@@ -91,6 +95,7 @@ async function EditItem({ params }: Pick<PageProps<"/items/[id]/edit">, "params"
         defaultValues={toItemInput(item)}
         readOnly={!hasAccess(session, navItem.access, "edit") || item.is_locked}
         isLocked={item.is_locked}
+        hasStockHistory={(historyResult.count ?? 0) > 0}
       />
     </>
   )

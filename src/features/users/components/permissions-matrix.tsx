@@ -54,7 +54,9 @@ export function PermissionsMatrix({ value, onChange }: PermissionsMatrixProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {APP_MODULES.map((module) => (
+          {/* Inventory is switched off for now, so its row is hidden; remove the filter
+              to show it again. */}
+          {APP_MODULES.filter((module) => module !== "inventory_adjustments").map((module) => (
             <TableRow key={module}>
               <TableCell className="px-4 font-medium">{MODULE_LABELS[module]}</TableCell>
               {PERMISSION_ACTIONS.map((action) => (

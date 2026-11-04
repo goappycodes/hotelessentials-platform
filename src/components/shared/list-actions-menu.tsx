@@ -11,7 +11,7 @@ import {
   Settings,
   Upload,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,9 @@ export type ListActionsMenuProps = {
   config: ListConfig
   onImport?: () => void
   onExport?: (scope: ExportScope) => void
+  // Instead of onExport, so server pages can pass it: a Route Handler that returns the
+  // CSV (given ?scope= and, for the current view, the list's sort, filters and search).
+  exportHref?: string
   onPreferences?: () => void
   onResetColumnWidth?: () => void
 }
@@ -44,12 +47,24 @@ export function ListActionsMenu({
   config,
   onImport,
   onExport,
+  exportHref,
   onPreferences,
   onResetColumnWidth,
 }: ListActionsMenuProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { query, setSort } = useListQuery(config)
   const [isRefreshing, startRefresh] = useTransition()
+
+  // A download link (the response is an attachment), so the page stays as it is.
+  function download(scope: ExportScope) {
+    const params = new URLSearchParams(scope === "current-view" ? searchParams : undefined)
+    params.set("scope", scope)
+    const link = document.createElement("a")
+    link.href = `${exportHref}?${params}`
+    link.download = ""
+    link.click()
+  }
 
   return (
     <DropdownMenu>
@@ -106,14 +121,16 @@ export function ListActionsMenu({
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-52">
             <DropdownMenuItem
-              disabled={!onExport}
-              onSelect={() => onExport?.("all")}
+              disabled={!onExport && !exportHref}
+              onSelect={() => (exportHref ? download("all") : onExport?.("all"))}
             >
               Export {entityLabel}
             </DropdownMenuItem>
             <DropdownMenuItem
-              disabled={!onExport}
-              onSelect={() => onExport?.("current-view")}
+              disabled={!onExport && !exportHref}
+              onSelect={() =>
+                exportHref ? download("current-view") : onExport?.("current-view")
+              }
             >
               Export Current View
             </DropdownMenuItem>

@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: navItem.create.title }
 
 export default function NewItemPage({ searchParams }: PageProps<"/items/add">) {
   return (
-    <PageContainer className="max-w-6xl">
+    <PageContainer className="w-full">
       <PageHeader
         title={navItem.create.title}
         description="Add a product or service you sell or buy."

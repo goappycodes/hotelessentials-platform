@@ -16,25 +16,115 @@ export type Database = {
         Row: {
           id: string
           code: string
-          description: string
+          // Null for codes added by an import.
+          description: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           code: string
-          description: string
+          description?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           code?: string
-          description?: string
+          description?: string | null
           created_at?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      inventory_adjustments: {
+        Row: {
+          id: string
+          mode: Database["public"]["Enums"]["adjustment_mode"]
+          reference_number: string | null
+          adjustment_date: string
+          account: string
+          reason: string
+          description: string | null
+          status: Database["public"]["Enums"]["adjustment_status"]
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          mode?: Database["public"]["Enums"]["adjustment_mode"]
+          reference_number?: string | null
+          adjustment_date?: string
+          account?: string
+          reason: string
+          description?: string | null
+          status?: Database["public"]["Enums"]["adjustment_status"]
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          mode?: Database["public"]["Enums"]["adjustment_mode"]
+          reference_number?: string | null
+          adjustment_date?: string
+          account?: string
+          reason?: string
+          description?: string | null
+          status?: Database["public"]["Enums"]["adjustment_status"]
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_adjustments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_adjustment_items: {
+        Row: {
+          id: string
+          adjustment_id: string
+          item_id: string
+          quantity_adjusted: number
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          adjustment_id: string
+          item_id: string
+          quantity_adjusted: number
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          adjustment_id?: string
+          item_id?: string
+          quantity_adjusted?: number
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_adjustment_items_adjustment_id_fkey"
+            columns: ["adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_adjustments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_adjustment_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       item_images: {
         Row: {
@@ -98,6 +188,10 @@ export type Database = {
           intra_state_tax_id: string | null
           inter_state_tax_id: string | null
           track_inventory: boolean
+          inventory_account: string
+          inventory_valuation_method: Database["public"]["Enums"]["inventory_valuation_method"]
+          // The item's ID in the system it was imported from (Zoho "Item ID").
+          external_id: string | null
           is_locked: boolean
           is_active: boolean
           created_at: string
@@ -123,6 +217,9 @@ export type Database = {
           intra_state_tax_id?: string | null
           inter_state_tax_id?: string | null
           track_inventory?: boolean
+          inventory_account?: string
+          inventory_valuation_method?: Database["public"]["Enums"]["inventory_valuation_method"]
+          external_id?: string | null
           is_locked?: boolean
           is_active?: boolean
           created_at?: string
@@ -148,6 +245,9 @@ export type Database = {
           intra_state_tax_id?: string | null
           inter_state_tax_id?: string | null
           track_inventory?: boolean
+          inventory_account?: string
+          inventory_valuation_method?: Database["public"]["Enums"]["inventory_valuation_method"]
+          external_id?: string | null
           is_locked?: boolean
           is_active?: boolean
           created_at?: string
@@ -388,11 +488,29 @@ export type Database = {
     Views: {
       // Items plus their HSN code, for lists and search (security_invoker view).
       item_list: {
-        Row: Database["public"]["Tables"]["items"]["Row"] & { hsn_code: string | null }
+        // stock_on_hand is null for items that don't track inventory.
+        Row: Database["public"]["Tables"]["items"]["Row"] & {
+          hsn_code: string | null
+          stock_on_hand: number | null
+        }
         Relationships: []
       }
     }
     Functions: {
+      save_inventory_adjustment: {
+        Args: {
+          target_id: string | null
+          adjustment_date: string
+          reference_number: string
+          account: string
+          reason: string
+          description: string
+          status: Database["public"]["Enums"]["adjustment_status"]
+          // [{ item_id, quantity_adjusted }]
+          items: Json
+        }
+        Returns: string
+      }
       save_price_list: {
         Args: {
           target_id: string | null
@@ -423,6 +541,9 @@ export type Database = {
       }
     }
     Enums: {
+      adjustment_mode: "Quantity Adjustment" | "Value Adjustment"
+      adjustment_status: "Draft" | "Adjusted"
+      inventory_valuation_method: "FIFO (First In, First Out)" | "WAC (Weighted Average Costing)"
       item_type: "Goods" | "Service"
       percentage_type: "Markup" | "Markdown"
       price_list_type: "All Items" | "Individual Items"
@@ -448,5 +569,8 @@ type PublicSchema = Database["public"]
 
 export type Tables<T extends keyof PublicSchema["Tables"]> =
   PublicSchema["Tables"][T]["Row"]
+
+export type TablesInsert<T extends keyof PublicSchema["Tables"]> =
+  PublicSchema["Tables"][T]["Insert"]
 
 export type Enums<T extends keyof PublicSchema["Enums"]> = PublicSchema["Enums"][T]

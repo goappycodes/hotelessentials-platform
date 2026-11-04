@@ -11,9 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 type ListPageActionsProps = ListActionsMenuProps & {
   create?: { href: string; title: string }
+  // A module's own "⋯" menu (a client component wrapping ListActionsMenu), used instead
+  // of the default one, e.g. when Import needs a file picker.
+  menu?: React.ReactNode
 }
 
-export function ListPageActions({ create, ...menuProps }: ListPageActionsProps) {
+export function ListPageActions({ create, menu, ...menuProps }: ListPageActionsProps) {
   return (
     <>
       {create && (
@@ -31,7 +34,7 @@ export function ListPageActions({ create, ...menuProps }: ListPageActionsProps) 
           </Button>
         }
       >
-        <ListActionsMenu {...menuProps} />
+        {menu ?? <ListActionsMenu {...menuProps} />}
       </Suspense>
     </>
   )

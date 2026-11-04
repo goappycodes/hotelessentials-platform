@@ -7,6 +7,7 @@ import { AccessDenied } from "@/components/shared/access-denied"
 import { ListPageActions } from "@/components/shared/list-page-actions"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { getItemRows, ItemsTableSkeleton } from "@/features/items/components/item-rows"
+import { ItemsActionsMenu } from "@/features/items/components/items-actions-menu"
 import { ItemsWorkspace } from "@/features/items/components/items-workspace"
 import { ITEMS_LIST } from "@/features/items/list-config"
 import { hasAccess } from "@/lib/permissions"
@@ -40,6 +41,12 @@ async function Items({ searchParams }: Pick<PageProps<"/items">, "searchParams">
             create={hasAccess(session, navItem.access, "create") ? navItem.create : undefined}
             entityLabel={navItem.title}
             config={ITEMS_LIST}
+            menu={
+              <ItemsActionsMenu
+                entityLabel={navItem.title}
+                canImport={hasAccess(session, navItem.access, "create")}
+              />
+            }
           />
         )
       }
@@ -63,6 +70,8 @@ async function Items({ searchParams }: Pick<PageProps<"/items">, "searchParams">
       hasNextPage={hasNextPage}
       isFiltered={isFiltered}
       canCreate={hasAccess(session, navItem.access, "create")}
+      canEdit={hasAccess(session, navItem.access, "edit")}
+      canDelete={hasAccess(session, navItem.access, "delete")}
       header={header}
     />
   )

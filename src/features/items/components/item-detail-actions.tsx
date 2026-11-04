@@ -34,6 +34,9 @@ type ItemDetailActionsProps = {
   isActive: boolean
   isLocked: boolean
   can: { create: boolean; edit: boolean; delete: boolean; lock: boolean }
+  // Adjust Stock opens a new inventory adjustment for this item. Null hides it (no
+  // permission); blockedReason shows it disabled with the reason.
+  adjustStock: { href: string } | { blockedReason: string } | null
   // After a change, so the panel and list can reload.
   onChanged: () => void
   onDeleted: () => void
@@ -46,6 +49,7 @@ export function ItemDetailActions({
   isActive,
   isLocked,
   can,
+  adjustStock,
   onChanged,
   onDeleted,
   onClose,
@@ -97,17 +101,24 @@ export function ItemDetailActions({
           <TooltipContent>Edit</TooltipContent>
         </Tooltip>
       )}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {/* A span keeps the tooltip working on a disabled button. */}
-          <span tabIndex={0}>
-            <Button size="sm" disabled>
-              Adjust Stock
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>Stock adjustments arrive with the Inventory module.</TooltipContent>
-      </Tooltip>
+      {adjustStock &&
+        ("href" in adjustStock ? (
+          <Button asChild size="sm">
+            <Link href={adjustStock.href}>Adjust Stock</Link>
+          </Button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {/* A span keeps the tooltip working on a disabled button. */}
+              <span tabIndex={0}>
+                <Button size="sm" disabled>
+                  Adjust Stock
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{adjustStock.blockedReason}</TooltipContent>
+          </Tooltip>
+        ))}
       {showMore && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -166,8 +177,8 @@ export function ItemDetailActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {itemName}?</AlertDialogTitle>
             <AlertDialogDescription>
-              The item and its images are deleted for good. Items used in a price list
-              can&apos;t be deleted; mark them as inactive instead.
+              The item and its images are deleted for good. Items used in a price list or an
+              inventory adjustment can&apos;t be deleted; mark them as inactive instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

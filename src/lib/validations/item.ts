@@ -1,12 +1,14 @@
 import { z } from "zod"
 
 import {
+  INVENTORY_ACCOUNTS,
+  INVENTORY_VALUATION_METHODS,
   ITEM_TYPES,
   PURCHASE_ACCOUNTS,
   SALES_ACCOUNTS,
   TAX_PREFERENCES,
 } from "@/constants/items"
-import { MONEY_PATTERN } from "@/lib/format"
+import { MONEY_PATTERN, MONEY_PATTERN_MESSAGE } from "@/lib/format"
 
 const optionalText = (max: number, label: string) =>
   z.string().trim().max(max, `${label} must be at most ${max} characters`)
@@ -16,7 +18,7 @@ const price = z
   .string()
   .trim()
   .refine((value) => value === "" || MONEY_PATTERN.test(value), {
-    message: "Enter an amount like 1200 or 99.50",
+    message: MONEY_PATTERN_MESSAGE,
   })
 
 const optionalId = z.union([z.uuid(), z.literal("")])
@@ -45,12 +47,11 @@ export const itemSchema = z
     interStateTaxId: optionalId,
 
     trackInventory: z.boolean(),
+    inventoryAccount: z.enum(INVENTORY_ACCOUNTS),
+    inventoryValuationMethod: z.enum(INVENTORY_VALUATION_METHODS),
     isActive: z.boolean(),
   })
   .superRefine((item, context) => {
-    if (item.type === "Goods" && !item.hsnCodeId) {
-      context.addIssue({ code: "custom", path: ["hsnCodeId"], message: "Goods need an HSN code" })
-    }
     if (item.taxPreference === "Taxable" && !item.intraStateTaxId) {
       context.addIssue({ code: "custom", path: ["intraStateTaxId"], message: "Pick an intra-state tax" })
     }
