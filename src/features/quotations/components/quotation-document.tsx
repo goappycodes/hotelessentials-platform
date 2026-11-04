@@ -349,6 +349,7 @@ export function QuotationDocument({
                   <dd>{amount(value)}</dd>
                 </div>
               ))}
+              {/* TDS / TCS is hidden for now; uncomment to print it again.
               {quote.direct_tax_amount > 0 && (
                 <>
                   <dt>
@@ -362,6 +363,7 @@ export function QuotationDocument({
                   </dd>
                 </>
               )}
+              */}
               {quote.adjustment !== 0 && (
                 <>
                   <dt>{quote.adjustment_description || "Adjustment"}</dt>

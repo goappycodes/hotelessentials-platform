@@ -31,7 +31,8 @@ import {
   type PendingAttachment,
   type QuotationAttachmentView,
 } from "@/features/quotations/components/quotation-attachments-field"
-import { DirectTaxField } from "@/features/quotations/components/direct-tax-field"
+// TDS / TCS is hidden for now; this comes back with it.
+// import { DirectTaxField } from "@/features/quotations/components/direct-tax-field"
 import { QuotationItemsTable } from "@/features/quotations/components/quotation-items-table"
 import type { QuotationFormOptions } from "@/features/quotations/queries"
 import { invalidateQuotationDetail } from "@/features/quotations/quotation-detail-cache"
@@ -78,8 +79,9 @@ export function QuotationForm(props: QuotationFormProps) {
   const [error, setError] = useState<string>()
   const [savedFiles, setSavedFiles] = useState(mode === "edit" ? props.attachments : [])
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([])
-  // TDS / TCS rates, with any added from this form.
-  const [directTaxes, setDirectTaxes] = useState(options.directTaxes)
+  // TDS / TCS rates, with any added from this form. (The TDS / TCS row is hidden for now;
+  // setDirectTaxes comes back with it.)
+  const [directTaxes /* , setDirectTaxes */] = useState(options.directTaxes)
   const disabled = readOnly || isPending
 
   const form = useForm<QuotationInput>({
@@ -364,15 +366,17 @@ export function QuotationForm(props: QuotationFormProps) {
                   <Totals
                     totals={totals}
                     disabled={disabled}
-                    directTax={
-                      <DirectTaxField
-                        rates={directTaxes}
-                        amount={totals.directTaxAmount}
-                        canManage={props.canManageDirectTaxes}
-                        disabled={disabled}
-                        onRateAdded={(rate) => setDirectTaxes((current) => [...current, rate])}
-                      />
-                    }
+                    // TDS / TCS is hidden for now. To show it again, uncomment this (and
+                    // the DirectTaxField import and setDirectTaxes above).
+                    // directTax={
+                    //   <DirectTaxField
+                    //     rates={directTaxes}
+                    //     amount={totals.directTaxAmount}
+                    //     canManage={props.canManageDirectTaxes}
+                    //     disabled={disabled}
+                    //     onRateAdded={(rate) => setDirectTaxes((current) => [...current, rate])}
+                    //   />
+                    // }
                   />
                 }
               />
@@ -437,7 +441,8 @@ function Totals({
 }: {
   totals: ReturnType<typeof computeQuotationTotals>
   disabled: boolean
-  directTax: React.ReactNode
+  // The TDS / TCS row (hidden for now).
+  directTax?: React.ReactNode
 }) {
   const { control, register, getFieldState, formState } = useFormContext<QuotationInput>()
   const adjustment = useWatch({ control, name: "adjustment" })

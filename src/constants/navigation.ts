@@ -182,7 +182,9 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
   {
     title: "Settings",
     icon: Settings,
-    items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes, MODULE_NAV_ITEMS.directTaxes],
+    // Direct Taxes (TDS / TCS) is hidden for now; to show it again, use this instead:
+    // items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes, MODULE_NAV_ITEMS.directTaxes],
+    items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes],
   },
 ]
 
