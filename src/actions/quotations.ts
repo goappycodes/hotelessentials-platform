@@ -323,9 +323,18 @@ const itemSearchSchema = z.object({
 // The item picker shows this many at a time, and the next batch as you scroll.
 const ITEM_SEARCH_PAGE_SIZE = 10
 
-export type QuoteItemPage = { items: QuoteItemOption[]; hasMore: boolean }
+export type QuoteItemPage = {
+  items: QuoteItemOption[]
+  hasMore: boolean
+  // The one item whose whole name, SKU or HSN code is what was typed (or pasted), so the
+  // picker can choose it without a click. Null when none or several match.
+  exactMatch: QuoteItemOption | null
+}
 
-const NO_ITEMS: QuoteItemPage = { items: [], hasMore: false }
+const NO_ITEMS: QuoteItemPage = { items: [], hasMore: false, exactMatch: null }
+
+const QUOTE_ITEM_COLUMNS =
+  "id, name, sku, unit, hsn_code, sales_description, selling_price, intra_state_tax_id, inter_state_tax_id, tax_preference" as const
 
 // Items for the quotation's item picker: active, sold items matching the name, SKU or
 // HSN code, priced with the quotation's price list when it has one. `offset` pages
@@ -349,9 +358,7 @@ export async function searchQuoteItems(
   const words = parsed.data.term.replace(/[%_,()]/g, " ").trim()
   let query = supabase
     .from("item_list")
-    .select(
-      "id, name, sku, unit, hsn_code, sales_description, selling_price, intra_state_tax_id, inter_state_tax_id, tax_preference"
-    )
+    .select(QUOTE_ITEM_COLUMNS)
     .eq("is_active", true)
     .eq("sales_enabled", true)
     .order("name")
@@ -362,28 +369,61 @@ export async function searchQuoteItems(
     query = query.or(`name.ilike.%${words}%,sku.ilike.%${words}%,hsn_code.ilike.%${words}%`)
   }
 
-  const { data: rows, error } = await query
+  const [{ data: rows, error }, exact] = await Promise.all([
+    query,
+    parsed.data.offset === 0 ? findExactItem(supabase, parsed.data.term) : Promise.resolve(null),
+  ])
   if (error || !rows) return NO_ITEMS
   const hasMore = rows.length > ITEM_SEARCH_PAGE_SIZE
   const items = rows.slice(0, ITEM_SEARCH_PAGE_SIZE)
-  const listRates = await priceItemsFromList(supabase, parsed.data.priceListId, items)
+  const listRates = await priceItemsFromList(
+    supabase,
+    parsed.data.priceListId,
+    exact ? [...items, exact] : items
+  )
+  const toOption = (item: (typeof items)[number]): QuoteItemOption => ({
+    id: item.id,
+    name: item.name,
+    sku: item.sku,
+    unit: item.unit,
+    hsnCode: item.hsn_code,
+    description: item.sales_description,
+    sellingPrice: item.selling_price,
+    rate: listRates.get(item.id) ?? item.selling_price,
+    intraTaxId: item.intra_state_tax_id,
+    interTaxId: item.inter_state_tax_id,
+    isTaxable: item.tax_preference === "Taxable",
+  })
 
   return {
     hasMore,
-    items: items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      sku: item.sku,
-      unit: item.unit,
-      hsnCode: item.hsn_code,
-      description: item.sales_description,
-      sellingPrice: item.selling_price,
-      rate: listRates.get(item.id) ?? item.selling_price,
-      intraTaxId: item.intra_state_tax_id,
-      interTaxId: item.inter_state_tax_id,
-      isTaxable: item.tax_preference === "Taxable",
-    })),
+    items: items.map(toOption),
+    exactMatch: exact ? toOption(exact) : null,
   }
+}
+
+// The one active, sold item whose whole name or SKU (any case) or HSN code is the term.
+async function findExactItem(supabase: Awaited<ReturnType<typeof createClient>>, term: string) {
+  const text = term.trim()
+  if (!text) return null
+  // ilike without wildcards is a case-insensitive "equals"; escape the term's own.
+  const pattern = text.replace(/[\\%_]/g, (character) => `\\${character}`)
+  const base = () =>
+    supabase
+      .from("item_list")
+      .select(QUOTE_ITEM_COLUMNS)
+      .eq("is_active", true)
+      .eq("sales_enabled", true)
+      .limit(2)
+  const results = await Promise.all([
+    base().ilike("name", pattern),
+    base().ilike("sku", pattern),
+    base().eq("hsn_code", text),
+  ])
+  const matches = new Map(
+    results.flatMap((result) => result.data ?? []).map((item) => [item.id, item])
+  )
+  return matches.size === 1 ? [...matches.values()][0] : null
 }
 
 // Each item's price on a sales price list: marked up or down for "All Items" lists, or

@@ -309,6 +309,7 @@ function LineRow({
       <TableCell className="px-2 py-2">
         <ItemInput
           index={index}
+          itemId={line.itemId}
           name={line.name}
           hsnCode={line.itemId ? line.hsnCode : ""}
           priceListId={priceListId}
@@ -465,6 +466,7 @@ export function PercentOrAmount({
 // line, or keep what you typed as a line of its own.
 function ItemInput({
   index,
+  itemId,
   name,
   hsnCode,
   priceListId,
@@ -474,6 +476,8 @@ function ItemInput({
   onTypeName,
 }: {
   index: number
+  // The item the line is from; empty while typing.
+  itemId: string
   name: string
   // Shown under the box for a line from an item.
   hsnCode: string
@@ -493,13 +497,27 @@ function ItemInput({
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const term = name.trim()
 
-  // The first batch for what's typed; more come in as the list is scrolled.
+  // Read from the search's callback, so a newer value is used without searching again.
+  const latest = useRef({ itemId, onChoose })
+  useEffect(() => {
+    latest.current = { itemId, onChoose }
+  })
+
+  // The first batch for what's typed; more come in as the list is scrolled. When the
+  // whole name, SKU or HSN code of exactly one item was typed or pasted, that item is
+  // chosen straight away (no need to pick it from the list).
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
     const timer = setTimeout(async () => {
       const page = await searchQuoteItems(term, priceListId)
-      if (!cancelled) setResults({ term, priceListId, ...page })
+      if (cancelled) return
+      setResults({ term, priceListId, ...page })
+      if (page.exactMatch && page.exactMatch.id !== latest.current.itemId) {
+        latest.current.onChoose(page.exactMatch)
+        setIsOpen(false)
+        setActiveIndex(-1)
+      }
     }, SEARCH_DEBOUNCE_MS)
     return () => {
       cancelled = true
