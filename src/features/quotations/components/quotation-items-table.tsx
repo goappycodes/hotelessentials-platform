@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react"
 import { useFieldArray, useFormContext, useWatch, type FieldPath } from "react-hook-form"
 
 import {
+  getLinePrices,
   searchQuoteItems,
   type QuoteItemOption,
   type QuoteItemPage,
@@ -32,7 +33,7 @@ import {
 import { EMPTY_LINE } from "@/features/quotations/quotation-input"
 import { formatTaxName, type TaxRate } from "@/features/taxes/tax-rates"
 import { formatCurrency, toMoneyInput } from "@/lib/format"
-import { defaultTaxIdFor } from "@/lib/quotations"
+import { defaultTaxIdFor, priceFromList } from "@/lib/quotations"
 import { cn } from "@/lib/utils"
 import {
   MAX_QUOTATION_LINES,
@@ -43,10 +44,15 @@ import {
 const HEAD_CLASS = "h-9 px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase"
 // Radix Select can't hold an empty value, so this stands in for "no tax".
 const NO_TAX = "__none__"
+const NO_PRICE_LIST = "__none__"
 const SEARCH_DEBOUNCE_MS = 200
+
+export type PriceListOption = { id: string; name: string; is_active: boolean }
 
 type QuotationItemsTableProps = {
   taxes: readonly TaxRate[]
+  // Sales price lists a line can be priced from (the Discount column).
+  priceLists: readonly PriceListOption[]
   // Each line's amount after its discount (from the totals), for the Amount column.
   lineAmounts: number[]
   businessState: string | null
@@ -59,9 +65,10 @@ type QuotationItemsTableProps = {
 }
 
 // Zoho's item table: pick an item (searched on the server as you type) or type a name,
-// then quantity, rate, discount (at line level) and tax.
+// then quantity, rate, the price list its discount comes from, and tax.
 export function QuotationItemsTable({
   taxes,
+  priceLists,
   lineAmounts,
   businessState,
   isOverseas,
@@ -98,11 +105,73 @@ export function QuotationItemsTable({
     set(`lines.${index}.description`, "")
     set(`lines.${index}.hsnCode`, item.hsnCode ?? "")
     set(`lines.${index}.unit`, item.unit ?? "")
-    set(`lines.${index}.rate`, toMoneyInput(item.rate))
+    // Priced from the quotation's default price list (item.rate is its price there).
+    const price = priceFromList(item.sellingPrice, item.rate)
+    set(`lines.${index}.priceListId`, priceListId)
+    set(`lines.${index}.rate`, toMoneyInput(price.rate))
+    set(`lines.${index}.discountValue`, price.discountPercent ? String(price.discountPercent) : "")
+    set(`lines.${index}.discountIsPercent`, true)
     set(`lines.${index}.taxId`, taxId ?? "")
     set(`lines.${index}.itemIntraTaxId`, item.isTaxable ? (item.intraTaxId ?? "") : "")
     set(`lines.${index}.itemInterTaxId`, item.isTaxable ? (item.interTaxId ?? "") : "")
   }
+
+  // Prices item lines from a price list: the rate and the discount it gives.
+  const [pricingIds, setPricingIds] = useState<string[]>([])
+  async function applyPriceList(indexes: number[], listId: string) {
+    const lines = getValues("lines")
+    const targets = indexes.flatMap((index) =>
+      lines[index]?.itemId ? [{ fieldId: fields[index]?.id, itemId: lines[index].itemId }] : []
+    )
+    targets.forEach(({ fieldId }) => {
+      const index = fields.findIndex((field) => field.id === fieldId)
+      if (index >= 0) set(`lines.${index}.priceListId`, listId)
+    })
+    if (targets.length === 0) return
+
+    const ids = targets.map((target) => target.fieldId)
+    setPricingIds((current) => [...current, ...ids])
+    try {
+      const prices = await getLinePrices(
+        listId,
+        targets.map((target) => target.itemId)
+      )
+      // Rows may have moved or changed while pricing: match them by row and item again.
+      const current = getValues("lines")
+      targets.forEach(({ fieldId, itemId }) => {
+        const index = fieldsRef.current.findIndex((field) => field.id === fieldId)
+        const line = current[index]
+        const price = prices[itemId]
+        if (!line || !price || line.itemId !== itemId || line.priceListId !== listId) return
+        const priced = priceFromList(price.sellingPrice, price.listRate)
+        set(`lines.${index}.rate`, toMoneyInput(priced.rate))
+        set(`lines.${index}.discountValue`, priced.discountPercent ? String(priced.discountPercent) : "")
+        set(`lines.${index}.discountIsPercent`, true)
+      })
+    } finally {
+      setPricingIds((current) => current.filter((id) => !ids.includes(id)))
+    }
+  }
+
+  // The latest rows, for matching after an await.
+  const fieldsRef = useRef(fields)
+  useEffect(() => {
+    fieldsRef.current = fields
+  }, [fields])
+
+  // Changing the quotation's price list (or picking a customer with one) re-prices every
+  // item line from it; lines can then pick their own.
+  const previousPriceList = useRef(priceListId)
+  useEffect(() => {
+    if (previousPriceList.current === priceListId) return
+    previousPriceList.current = priceListId
+    void applyPriceList(
+      fields.map((_, index) => index),
+      priceListId
+    )
+    // applyPriceList only reads current values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceListId])
 
   return (
     <div className="flex flex-col gap-3">
@@ -117,7 +186,7 @@ export function QuotationItemsTable({
               <TableHead className={cn(HEAD_CLASS, "w-24 text-right")}>Quantity</TableHead>
               <TableHead className={cn(HEAD_CLASS, "w-32 text-right")}>Rate</TableHead>
               {isLineLevel && (
-                <TableHead className={cn(HEAD_CLASS, "w-36 text-right")}>Discount</TableHead>
+                <TableHead className={cn(HEAD_CLASS, "w-40")}>Price List</TableHead>
               )}
               <TableHead className={cn(HEAD_CLASS, "w-44")}>Tax</TableHead>
               <TableHead className={cn(HEAD_CLASS, "w-32 text-right")}>Amount</TableHead>
@@ -136,10 +205,13 @@ export function QuotationItemsTable({
                   amount={lineAmounts[index] ?? 0}
                   isLineLevel={isLineLevel}
                   priceListId={priceListId}
+                  priceLists={priceLists}
+                  isPricing={pricingIds.includes(field.id)}
                   disabled={disabled}
                   canRemove={fields.length > 1}
                   onRemove={() => remove(index)}
                   onChooseItem={(item) => chooseItem(index, item)}
+                  onChoosePriceList={(listId) => void applyPriceList([index], listId)}
                   onTypeName={(name) => {
                     // A typed name is a line of its own, not tied to an item.
                     set(`lines.${index}.itemId`, "")
@@ -193,11 +265,14 @@ function LineRow({
   amount,
   isLineLevel,
   priceListId,
+  priceLists,
+  isPricing,
   disabled,
   canRemove,
   onRemove,
   onChooseItem,
   onTypeName,
+  onChoosePriceList,
   register,
   set,
   errors,
@@ -206,12 +281,16 @@ function LineRow({
   taxes: readonly TaxRate[]
   amount: number
   isLineLevel: boolean
+  // The quotation's default price list (for pricing items in the search).
   priceListId: string
+  priceLists: readonly PriceListOption[]
+  isPricing: boolean
   disabled: boolean
   canRemove: boolean
   onRemove: () => void
   onChooseItem: (item: QuoteItemOption) => void
   onTypeName: (name: string) => void
+  onChoosePriceList: (priceListId: string) => void
   register: ReturnType<typeof useFormContext<QuotationInput>>["register"]
   set: (name: FieldPath<QuotationInput>, value: string | boolean) => void
   errors: Record<"name" | "quantity" | "rate" | "discountValue", LineError>
@@ -219,8 +298,11 @@ function LineRow({
   const { control } = useFormContext<QuotationInput>()
   const line = useWatch({ control, name: `lines.${index}` })
 
-  // Inactive taxes stay listed only for lines that already use them.
+  // Inactive taxes and price lists stay listed only for lines that already use them.
   const taxOptions = taxes.filter((tax) => tax.is_active || tax.id === line.taxId)
+  const priceListOptions = priceLists.filter(
+    (list) => list.is_active || list.id === line.priceListId
+  )
 
   return (
     <TableRow className="align-top hover:bg-transparent">
@@ -262,6 +344,8 @@ function LineRow({
       </TableCell>
       {isLineLevel && (
         <TableCell className="px-2 py-2">
+          {/* The discount comes from a price list rather than being typed in. To type
+              discounts again, swap the Select below for this:
           <div className="flex">
             <Input
               {...register(`lines.${index}.discountValue`)}
@@ -279,6 +363,28 @@ function LineRow({
               onChange={(isPercent) => set(`lines.${index}.discountIsPercent`, isPercent)}
             />
           </div>
+          */}
+          <Select
+            value={line.itemId ? line.priceListId || NO_PRICE_LIST : NO_PRICE_LIST}
+            onValueChange={(value) => onChoosePriceList(value === NO_PRICE_LIST ? "" : value)}
+            disabled={disabled || !line.itemId}
+          >
+            <SelectTrigger aria-label={`Price list, row ${index + 1}`} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PRICE_LIST}>No price list</SelectItem>
+              {priceListOptions.map((list) => (
+                <SelectItem key={list.id} value={list.id}>
+                  {list.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
+            {isPricing && <Spinner className="size-3" />}
+            {discountLabel(line.discountValue, line.discountIsPercent)}
+          </p>
           {errors.discountValue && (
             <FieldError className="mt-1 text-right" errors={[errors.discountValue]} />
           )}
@@ -320,6 +426,13 @@ function LineRow({
       </TableCell>
     </TableRow>
   )
+}
+
+// Under a line's price list: what it takes off ("10% off"), if anything.
+function discountLabel(value: string, isPercent: boolean) {
+  const amount = Number(value || 0)
+  if (!amount) return "No discount"
+  return isPercent ? `${Number(amount.toFixed(2))}% off` : `${formatCurrency(amount)} off`
 }
 
 // "%" or "₹" next to a discount box.

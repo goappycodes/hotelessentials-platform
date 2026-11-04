@@ -9,6 +9,7 @@ import { AccessDenied } from "@/components/shared/access-denied"
 import { AccessGate } from "@/components/shared/access-gate"
 import { Button } from "@/components/ui/button"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
+import { COMPANY_ASSETS_BUCKET } from "@/constants/quotations"
 import { BusinessStateCard } from "@/features/taxes/components/business-state-card"
 import { CompanyProfileCard } from "@/features/taxes/components/company-profile-card"
 import { TaxesTable, TaxesTableSkeleton } from "@/features/taxes/components/taxes-table"
@@ -20,13 +21,26 @@ async function BusinessState() {
   const [supabase, session] = await Promise.all([createRequestClient(), requireUser()])
   const { data } = await supabase
     .from("organization_settings")
-    .select("gst_state_code, company_name, address, phone, email, gstin, bank_details")
+    .select(
+      "gst_state_code, company_name, address, phone, email, gstin, bank_details, logo_path, signature_path"
+    )
     .maybeSingle()
+  const paths = [data?.logo_path, data?.signature_path].filter((path): path is string =>
+    Boolean(path)
+  )
+  const { data: links } = paths.length
+    ? await supabase.storage.from(COMPANY_ASSETS_BUCKET).createSignedUrls(paths, 60 * 60)
+    : { data: [] }
+  const urlFor = (path: string | null | undefined) =>
+    (path && links?.find((link) => link.path === path)?.signedUrl) || null
+
   return (
     <>
       <BusinessStateCard stateCode={data?.gst_state_code ?? null} />
       <CompanyProfileCard
         canEdit={isAdminRole(session.role)}
+        logoUrl={urlFor(data?.logo_path)}
+        signatureUrl={urlFor(data?.signature_path)}
         defaultValues={{
           companyName: data?.company_name ?? "",
           address: data?.address ?? "",

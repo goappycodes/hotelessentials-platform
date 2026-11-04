@@ -120,6 +120,9 @@ export type Database = {
           email: string | null
           gstin: string | null
           bank_details: string | null
+          // Files in the company-assets bucket.
+          logo_path: string | null
+          signature_path: string | null
           updated_at: string
         }
         Insert: Partial<Database["public"]["Tables"]["organization_settings"]["Row"]>
@@ -240,6 +243,8 @@ export type Database = {
           rate: number
           discount_value: number
           discount_is_percent: boolean
+          // The sales price list the line is priced from (its discount comes from it).
+          price_list_id: string | null
           tax_id: string | null
           tax_name: string | null
           tax_rate: number | null

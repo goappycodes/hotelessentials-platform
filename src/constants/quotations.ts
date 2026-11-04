@@ -39,3 +39,8 @@ export const DEFAULT_QUOTATION_TERMS = [
 ].join("\n")
 
 export const DEFAULT_ADJUSTMENT_LABEL = "Adjustment"
+
+// The business's logo and signature stamp, printed on quotations.
+export const COMPANY_ASSETS_BUCKET = "company-assets"
+export const COMPANY_IMAGE_TYPES: readonly string[] = ["image/jpeg", "image/png", "image/webp"]
+export const MAX_COMPANY_IMAGE_BYTES = 2 * 1024 * 1024

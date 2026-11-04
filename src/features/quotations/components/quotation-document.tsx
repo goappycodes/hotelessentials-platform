@@ -1,26 +1,41 @@
-// The quotation as the customer sees it, laid out like the Zoho quote template: the
-// business's details, Bill To, the items with their GST split, totals in figures and
-// words, bank details, terms and a signature box. Shown beside the list and on the print
-// page (print it or save it as PDF). No hooks, so it renders on the server or the client.
+// The quotation as the customer sees it, laid out like the business's Zoho quote
+// template: logo and company details, quote details and place of supply, Bill To, the
+// items with their GST split, totals in figures and words, bank details, terms and the
+// signature stamp. Shown beside the list and on the print page (print or save as PDF).
+// No hooks, so it renders on the server or the client.
+/* eslint-disable @next/next/no-img-element -- signed storage URLs, printed as they are */
 import { INDIAN_STATES } from "@/constants/customers"
 import type { QuotationDocumentData } from "@/features/quotations/queries"
 import { amountInWords } from "@/lib/amount-in-words"
-import { formatCurrency, formatDay, formatQuantity } from "@/lib/format"
+import { formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 const numberFormat = new Intl.NumberFormat("en-IN", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 })
+const quantityFormat = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 4 })
 const amount = (value: number) => numberFormat.format(value)
-const percent = (value: number) => `${Number(value.toFixed(2))}%`
+const percent = (value: number) => `${Number(value.toFixed(2))}`
+
+// Like Zoho's quote: 04/11/2026.
+function formatQuoteDate(value: string) {
+  const [year, month, day] = value.split("-")
+  return `${day}/${month}/${year}`
+}
+
+// The template's colours.
+const LABEL = "text-[#3c4f8c]"
+const ACCENT = "text-[#a5372b]"
+const ITEM_ACCENT = "text-[#c0561d]"
+const CUSTOMER = "text-[#2257c5]"
 
 const RIBBON_CLASS: Record<string, string> = {
-  Draft: "bg-neutral-500",
-  Sent: "bg-blue-600",
-  Accepted: "bg-emerald-600",
-  Declined: "bg-red-600",
-  Expired: "bg-amber-600",
+  Draft: "bg-[#7d8b8c]",
+  Sent: "bg-[#4a8bd6]",
+  Accepted: "bg-[#3aa76d]",
+  Declined: "bg-[#d0453c]",
+  Expired: "bg-[#d48a2c]",
 }
 
 type Line = QuotationDocumentData["lines"][number]
@@ -47,6 +62,9 @@ function placeOfSupplyLabel(code: string | null) {
   return state ? `${state.name} (${code})` : code
 }
 
+const lines = (text: string | null | undefined) =>
+  (text ?? "").split("\n").filter((line) => line.trim())
+
 export function QuotationDocument({
   data,
   isExpired = false,
@@ -56,10 +74,11 @@ export function QuotationDocument({
   isExpired?: boolean
   className?: string
 }) {
-  const { quote, lines, customer, company } = data
-  const status = isExpired && quote.status !== "Accepted" && quote.status !== "Declined"
-    ? "Expired"
-    : quote.status
+  const { quote, customer, company } = data
+  const status =
+    isExpired && quote.status !== "Accepted" && quote.status !== "Declined"
+      ? "Expired"
+      : quote.status
 
   // A whole-quote discount before tax lowers every line's taxable value by the same share.
   const transactionDiscount = quote.discount_level === "Transaction" ? quote.discount_total : 0
@@ -68,7 +87,7 @@ export function QuotationDocument({
       ? (quote.sub_total - transactionDiscount) / quote.sub_total
       : 1
 
-  const rows = lines.map((line) => {
+  const rows = data.lines.map((line) => {
     const tax = lineTax(line)
     const taxable = line.amount * taxableShare
     return {
@@ -79,159 +98,191 @@ export function QuotationDocument({
       igstAmount: (taxable * tax.igst) / 100,
     }
   })
+  // Lines with a discount (from a price list) get a Discount column.
+  const showDiscount = rows.some((row) => row.line.discount_value > 0)
   const showIntra = rows.some((row) => row.tax.cgst > 0 || row.tax.sgst > 0)
   const showInter = rows.some((row) => row.tax.igst > 0)
+  const taxGroups = [...(showIntra ? ["CGST", "SGST"] : []), ...(showInter ? ["IGST"] : [])]
 
-  // Tax totals per component and rate, e.g. "CGST9 (9%)".
+  // Tax totals per component and rate, e.g. "IGST18 (18%)".
   const taxSummary = new Map<string, number>()
-  const addTax = (label: string, value: number) =>
+  const addTax = (name: string, rate: number, value: number) => {
+    const label = `${name}${percent(rate)} (${percent(rate)}%)`
     taxSummary.set(label, (taxSummary.get(label) ?? 0) + value)
+  }
   rows.forEach((row) => {
-    if (row.tax.cgst) addTax(`CGST${Number(row.tax.cgst.toFixed(2))} (${percent(row.tax.cgst)})`, row.cgstAmount)
-    if (row.tax.sgst) addTax(`SGST${Number(row.tax.sgst.toFixed(2))} (${percent(row.tax.sgst)})`, row.sgstAmount)
-    if (row.tax.igst) addTax(`IGST${Number(row.tax.igst.toFixed(2))} (${percent(row.tax.igst)})`, row.igstAmount)
+    if (row.tax.cgst) addTax("CGST", row.tax.cgst, row.cgstAmount)
+    if (row.tax.sgst) addTax("SGST", row.tax.sgst, row.sgstAmount)
+    if (row.tax.igst) addTax("IGST", row.tax.igst, row.igstAmount)
   })
-
-  const companyLines = [
-    ...(company?.address?.split("\n") ?? []),
-    company?.phone,
-    company?.email,
-  ].filter((line): line is string => Boolean(line?.trim()))
 
   const billingLines = customer
     ? [
         customer.billing_attention,
         customer.billing_street1,
         customer.billing_street2,
-        [customer.billing_city, customer.billing_pin_code].filter(Boolean).join(" "),
-        [customer.billing_state, customer.billing_country].filter(Boolean).join(", "),
-        customer.billing_phone && `Phone: ${customer.billing_phone}`,
+        customer.billing_city,
+        [customer.billing_pin_code, customer.billing_state].filter(Boolean).join(" "),
+        customer.billing_country && customer.billing_country !== "India"
+          ? customer.billing_country
+          : null,
       ].filter((line): line is string => Boolean(line?.trim()))
     : []
 
   const details: [string, string | null][] = [
     ["Quotation No", quote.quote_number],
-    ["Quote Date", formatDay(quote.quote_date)],
-    ["Expiry Date", quote.expiry_date ? formatDay(quote.expiry_date) : null],
+    ["Quote Date", formatQuoteDate(quote.quote_date)],
+    ["Expiry Date", quote.expiry_date ? formatQuoteDate(quote.expiry_date) : null],
     ["Reference#", quote.reference_number],
-    ["Salesperson", data.salespersonName],
   ]
 
-  const cell = "border-neutral-400 px-1.5 py-1 align-top"
-  const head = "border-neutral-400 bg-neutral-100 px-1.5 py-1 font-semibold"
+  const cell = "border-[#9a9a9a] px-1.5 py-1.5 align-top"
+  const head = "border-[#9a9a9a] bg-[#f1f1f1] px-1.5 py-1 font-bold"
 
   return (
     <article
       aria-label={`Quotation ${quote.quote_number}`}
       className={cn(
-        "relative mx-auto w-full max-w-[210mm] overflow-hidden bg-white p-[8mm] font-serif text-[11px] leading-snug text-neutral-900",
+        "relative mx-auto w-full max-w-[210mm] overflow-hidden bg-white px-[9mm] py-[11mm] font-serif text-[10.5px] leading-[1.45] text-[#222] [print-color-adjust:exact]",
         className
       )}
     >
       <div
         aria-hidden="true"
         className={cn(
-          "absolute top-5 -left-10 w-36 -rotate-45 py-1 text-center font-sans text-xs font-medium text-white",
-          RIBBON_CLASS[status] ?? "bg-neutral-500"
+          "absolute top-[18px] -left-[42px] w-40 -rotate-45 py-1.5 text-center font-sans text-xs text-white",
+          RIBBON_CLASS[status] ?? RIBBON_CLASS.Draft
         )}
       >
         {status}
       </div>
 
-      <div className="border border-neutral-500">
+      <div className="border border-[#6b6b6b]">
         {/* The business */}
-        <header className="border-b border-neutral-500 px-4 py-3 pl-10">
-          <p className="text-base font-bold uppercase">{company?.company_name || "Your company"}</p>
-          {companyLines.map((line, index) => (
-            <p key={index} className="text-[10px] text-neutral-700">
-              {line}
+        <header className="flex gap-4 border-b border-[#6b6b6b] p-2.5">
+          {data.logoUrl && (
+            <img
+              src={data.logoUrl}
+              alt={company?.company_name ?? "Logo"}
+              className="h-[88px] w-[88px] shrink-0 object-contain"
+            />
+          )}
+          <div className="min-w-0 pt-0.5">
+            <p className="text-[15px] leading-tight font-bold uppercase">
+              {company?.company_name || "Your company"}
             </p>
-          ))}
-          {company?.gstin && <p className="text-[10px] text-neutral-700">GSTIN: {company.gstin}</p>}
+            {lines(company?.address).map((line, index) => (
+              <p key={index} className={cn("text-[9.5px]", ACCENT)}>
+                {line}
+              </p>
+            ))}
+            {company?.phone && <p className={cn("text-[9.5px]", ACCENT)}>{company.phone}</p>}
+            {company?.email && <p className="text-[9.5px] text-[#2257c5]">{company.email}</p>}
+            {company?.gstin && <p className="text-[9.5px]">GSTIN: {company.gstin}</p>}
+          </div>
         </header>
 
         {/* Quote details and place of supply */}
-        <div className="grid grid-cols-2 border-b border-neutral-500">
-          <dl className="grid grid-cols-[7rem_1fr] gap-x-2 gap-y-0.5 border-r border-neutral-500 px-2 py-1.5">
+        <div className="grid grid-cols-2 border-b border-[#6b6b6b]">
+          <dl className="grid grid-cols-[6.5rem_1fr] content-start gap-y-0.5 border-r border-[#6b6b6b] px-1.5 py-1.5">
             {details
               .filter(([, value]) => value)
               .map(([label, value]) => (
                 <div key={label} className="contents">
-                  <dt className="text-neutral-600">{label}</dt>
-                  <dd className="font-semibold">: {value}</dd>
+                  <dt className={LABEL}>{label}</dt>
+                  <dd className="font-bold">: {value}</dd>
                 </div>
               ))}
           </dl>
-          <dl className="grid grid-cols-[7rem_1fr] content-start gap-x-2 px-2 py-1.5">
-            <dt className="text-neutral-600">Place Of Supply</dt>
-            <dd className="font-semibold">: {placeOfSupplyLabel(quote.place_of_supply) ?? "—"}</dd>
+          <dl className="grid grid-cols-[6.5rem_1fr] content-start px-1.5 py-1.5">
+            <dt className={LABEL}>Place Of Supply</dt>
+            <dd className="font-bold">: {placeOfSupplyLabel(quote.place_of_supply) ?? "—"}</dd>
           </dl>
         </div>
 
         {/* The customer */}
-        <div className="border-b border-neutral-500 bg-neutral-100 px-2 py-0.5 font-semibold">
-          Bill To
-        </div>
-        <div className="border-b border-neutral-500 px-2 py-1.5">
-          <p className="font-semibold text-blue-700">{customer?.display_name ?? quote.customer_name}</p>
-          {customer?.company_name && customer.company_name !== customer.display_name && (
-            <p>{customer.company_name}</p>
-          )}
+        <div className="border-b border-[#6b6b6b] bg-[#f1f1f1] px-1.5 py-0.5 font-bold">Bill To</div>
+        <div className="border-b border-[#6b6b6b] px-1.5 py-1.5">
+          <p className={cn("font-bold", CUSTOMER)}>{customer?.display_name ?? quote.customer_name}</p>
           {billingLines.map((line, index) => (
-            <p key={index} className="text-[10px]">
+            <p key={index} className="text-[9.5px] uppercase">
               {line}
             </p>
           ))}
-          {customer?.gstin && <p className="text-[10px]">GSTIN: {customer.gstin}</p>}
+          {customer?.gstin && <p className="text-[9.5px]">GSTIN: {customer.gstin}</p>}
         </div>
 
         {quote.subject && (
-          <div className="border-b border-neutral-500 px-2 py-1.5">
-            <span className="text-neutral-600">Subject: </span>
-            {quote.subject}
+          <div className="border-b border-[#6b6b6b] px-1.5 py-1.5">
+            <p className={LABEL}>Subject :</p>
+            <p>{quote.subject}</p>
           </div>
         )}
 
         {/* The items */}
-        <table className="w-full border-collapse text-[10px]">
+        <table className="w-full border-collapse text-[9.5px]">
           <thead>
             <tr>
-              <th rowSpan={2} className={cn(head, "w-6 border-r border-b text-left")}>#</th>
-              <th rowSpan={2} className={cn(head, "border-r border-b text-left")}>Item &amp; Description</th>
-              <th rowSpan={2} className={cn(head, "w-14 border-r border-b text-right")}>Qty</th>
+              <th rowSpan={2} className={cn(head, "w-6 border-r border-b text-center")}>#</th>
+              <th rowSpan={2} className={cn(head, "border-r border-b text-left")}>
+                Item &amp; Description
+              </th>
+              <th rowSpan={2} className={cn(head, "w-12 border-r border-b text-right")}>Qty</th>
               <th rowSpan={2} className={cn(head, "w-16 border-r border-b text-right")}>Rate</th>
-              {showIntra && (
-                <>
-                  <th colSpan={2} className={cn(head, "border-r border-b text-center")}>CGST</th>
-                  <th colSpan={2} className={cn(head, "border-r border-b text-center")}>SGST</th>
-                </>
+              {showDiscount && (
+                <th rowSpan={2} className={cn(head, "w-14 border-r border-b text-right")}>
+                  Discount
+                </th>
               )}
-              {showInter && (
-                <th colSpan={2} className={cn(head, "border-r border-b text-center")}>IGST</th>
-              )}
-              <th rowSpan={2} className={cn(head, "w-20 border-b text-right")}>Amount</th>
+              {taxGroups.map((name) => (
+                <th key={name} colSpan={2} className={cn(head, "border-r border-b text-center")}>
+                  {name}
+                </th>
+              ))}
+              <th rowSpan={2} className={cn(head, "w-[4.5rem] border-b text-right")}>Amount</th>
             </tr>
             <tr>
-              {[...(showIntra ? ["CGST", "SGST"] : []), ...(showInter ? ["IGST"] : [])].map((tax) => (
-                <TaxHead key={tax} className={head} />
+              {taxGroups.map((name) => (
+                <TaxHead key={name} className={head} />
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map(({ line, tax, cgstAmount, sgstAmount, igstAmount }, index) => (
               <tr key={line.id} className="break-inside-avoid">
-                <td className={cn(cell, "border-r border-b")}>{index + 1}</td>
+                <td className={cn(cell, "border-r border-b text-center", ITEM_ACCENT)}>{index + 1}</td>
                 <td className={cn(cell, "border-r border-b")}>
-                  <p className="font-medium">{line.name}</p>
-                  {line.description && (
-                    <p className="whitespace-pre-line text-neutral-600">{line.description}</p>
-                  )}
-                  {line.hsn_code && <p className="mt-1 text-neutral-600">HSN: {line.hsn_code}</p>}
+                  <div className="flex gap-3">
+                    {line.imageUrl && (
+                      <img
+                        src={line.imageUrl}
+                        alt=""
+                        className="h-11 w-11 shrink-0 object-contain"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p>{line.name}</p>
+                      {line.description && (
+                        <p className="whitespace-pre-line text-[#555]">{line.description}</p>
+                      )}
+                      {line.hsn_code && <p className="mt-2">HSN: {line.hsn_code}</p>}
+                    </div>
+                  </div>
                 </td>
-                <td className={cn(cell, "border-r border-b text-right")}>
-                  {formatQuantity(line.quantity, line.unit)}
+                <td className={cn(cell, "border-r border-b text-right", ITEM_ACCENT)}>
+                  {quantityFormat.format(line.quantity)}
+                  {line.unit && <span className="block text-[8.5px] text-[#555]">{line.unit}</span>}
                 </td>
                 <td className={cn(cell, "border-r border-b text-right")}>{amount(line.rate)}</td>
+                {showDiscount && (
+                  <td className={cn(cell, "border-r border-b text-right", ITEM_ACCENT)}>
+                    {line.discount_value > 0
+                      ? line.discount_is_percent
+                        ? `${Number(line.discount_value.toFixed(2))}%`
+                        : amount(line.discount_value)
+                      : ""}
+                  </td>
+                )}
                 {showIntra && (
                   <>
                     <TaxCells rate={tax.cgst} value={cgstAmount} className={cell} />
@@ -246,33 +297,44 @@ export function QuotationDocument({
         </table>
 
         {/* Words, bank details and terms; totals and signature */}
-        <div className="grid grid-cols-[1fr_16rem] break-inside-avoid">
-          <div className="flex flex-col gap-3 border-r border-neutral-500 px-2 py-2">
+        <div className="grid grid-cols-[1fr_15rem] break-inside-avoid">
+          <div className="flex flex-col gap-3 border-r border-[#6b6b6b] px-1.5 py-2">
             <div>
-              <p className="text-neutral-600">Total In Words</p>
-              <p className="font-semibold italic">{amountInWords(quote.total)}</p>
+              <p className={LABEL}>Total In Words</p>
+              <p className="font-bold italic">{amountInWords(quote.total)}</p>
             </div>
             {quote.notes && (
               <div>
-                <p className="text-neutral-600">Notes</p>
+                <p className={LABEL}>Notes</p>
                 <p className="whitespace-pre-line">{quote.notes}</p>
               </div>
             )}
             {company?.bank_details && (
               <div>
-                <p className="font-semibold">BANK DETAILS</p>
-                <p className="whitespace-pre-line">{company.bank_details}</p>
+                <p className={cn("font-bold", LABEL)}>BANK DETAILS</p>
+                {lines(company.bank_details).map((line, index) => {
+                  // "Bank Name : STATE BANK OF INDIA": the value in the accent colour.
+                  const split = line.indexOf(":")
+                  return split > 0 ? (
+                    <p key={index}>
+                      {line.slice(0, split + 1)}
+                      <span className={ACCENT}>{line.slice(split + 1)}</span>
+                    </p>
+                  ) : (
+                    <p key={index}>{line}</p>
+                  )
+                })}
               </div>
             )}
             {quote.terms && (
               <div>
-                <p className="text-neutral-600">Terms &amp; Conditions</p>
+                <p className={ACCENT}>Terms &amp; Conditions</p>
                 <p className="whitespace-pre-line">{quote.terms}</p>
               </div>
             )}
           </div>
           <div className="flex flex-col">
-            <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-b border-neutral-500 px-2 py-2 text-right">
+            <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 border-b border-[#6b6b6b] px-1.5 py-2 text-right">
               <dt>Sub Total</dt>
               <dd>{amount(quote.sub_total)}</dd>
               {transactionDiscount > 0 && (
@@ -296,7 +358,14 @@ export function QuotationDocument({
               <dt className="font-bold">Total</dt>
               <dd className="font-bold">{formatCurrency(quote.total)}</dd>
             </dl>
-            <div className="flex min-h-28 flex-1 items-end justify-center px-2 pb-2">
+            <div className="flex min-h-36 flex-1 flex-col items-center justify-end gap-1 px-1.5 pt-2 pb-1.5">
+              {data.signatureUrl && (
+                <img
+                  src={data.signatureUrl}
+                  alt="Signature"
+                  className="max-h-28 max-w-full object-contain"
+                />
+              )}
               <p>Authorized Signature</p>
             </div>
           </div>
@@ -309,8 +378,8 @@ export function QuotationDocument({
 function TaxHead({ className }: { className: string }) {
   return (
     <>
-      <th className={cn(className, "w-9 border-r border-b text-right")}>%</th>
-      <th className={cn(className, "w-14 border-r border-b text-right")}>Amt</th>
+      <th className={cn(className, "w-7 border-r border-b text-center")}>%</th>
+      <th className={cn(className, "w-12 border-r border-b text-right")}>Amt</th>
     </>
   )
 }
@@ -318,7 +387,9 @@ function TaxHead({ className }: { className: string }) {
 function TaxCells({ rate, value, className }: { rate: number; value: number; className: string }) {
   return (
     <>
-      <td className={cn(className, "border-r border-b text-right")}>{rate ? percent(rate) : ""}</td>
+      <td className={cn(className, "border-r border-b text-center", ITEM_ACCENT)}>
+        {rate ? `${percent(rate)} %` : ""}
+      </td>
       <td className={cn(className, "border-r border-b text-right")}>{rate ? amount(value) : ""}</td>
     </>
   )

@@ -315,7 +315,7 @@ export function QuotationForm(props: QuotationFormProps) {
                 name="priceListId"
                 label="Price List"
                 orientation="horizontal"
-                hint="Rates of items you add come from this sales price list. Taken from the customer."
+                hint="The price list every line starts with (taken from the customer). Changing it re-prices all items; each line can pick its own in the Discount column."
                 placeholder="None (selling prices)"
                 searchPlaceholder="Search price lists"
                 options={priceListOptions}
@@ -335,6 +335,7 @@ export function QuotationForm(props: QuotationFormProps) {
             <section className="border-t p-6">
               <QuotationItemsTable
                 taxes={options.taxes}
+                priceLists={options.priceLists}
                 lineAmounts={totals.lineAmounts}
                 businessState={options.businessState}
                 isOverseas={isOverseas}

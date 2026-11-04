@@ -28,8 +28,14 @@ export const quotationLineSchema = z
       .trim()
       .refine((value) => QUANTITY_PATTERN.test(value) && Number(value) > 0, "Enter a quantity above 0"),
     rate: money.refine((value) => value !== "", "Enter a rate"),
-    discountValue: money,
+    // Up to 8 decimals: percentages from price lists are exact (9.99918605%).
+    discountValue: z
+      .string()
+      .trim()
+      .refine((value) => value === "" || /^\d{1,10}(\.\d{1,8})?$/.test(value), MONEY_PATTERN_MESSAGE),
     discountIsPercent: z.boolean(),
+    // The sales price list the line is priced from; its discount comes from the list.
+    priceListId: optionalId,
     taxId: optionalId,
     // The item's own taxes, so the form can switch the line between CGST + SGST and
     // IGST when the place of supply changes. Not saved.

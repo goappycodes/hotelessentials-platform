@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FieldGroup } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
+import { CompanyImageField } from "@/features/taxes/components/company-image-field"
 import {
   companyProfileSchema,
   type CompanyProfileInput,
@@ -22,9 +23,13 @@ import {
 // phone, email, GSTIN) and bottom (bank details) of quotations.
 export function CompanyProfileCard({
   defaultValues,
+  logoUrl,
+  signatureUrl,
   canEdit,
 }: {
   defaultValues: CompanyProfileInput
+  logoUrl: string | null
+  signatureUrl: string | null
   canEdit: boolean
 }) {
   const router = useRouter()
@@ -57,7 +62,23 @@ export function CompanyProfileCard({
           {!canEdit && " Only owners and admins can change them."}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-6">
+        <div className="grid max-w-3xl gap-6 sm:grid-cols-2">
+          <CompanyImageField
+            kind="logo"
+            label="Logo"
+            hint="Top left of the quote. PNG, JPG or WebP, up to 2 MB."
+            url={logoUrl}
+            canEdit={canEdit}
+          />
+          <CompanyImageField
+            kind="signature"
+            label="Signature / Stamp"
+            hint="Above Authorized Signature. A PNG with a clear background looks best."
+            url={signatureUrl}
+            canEdit={canEdit}
+          />
+        </div>
         <form onSubmit={submit} noValidate>
           <fieldset disabled={disabled} className="contents">
             <FieldGroup className="max-w-3xl gap-4">

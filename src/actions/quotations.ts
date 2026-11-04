@@ -126,6 +126,7 @@ export async function saveQuotation(
       // Line discounts only count at line level.
       discount_value: quote.discountLevel === "Line Item" ? lines[index].discountValue : 0,
       discount_is_percent: line.discountIsPercent,
+      price_list_id: line.itemId && line.priceListId ? line.priceListId : null,
       tax_id: lines[index].taxId,
       amount: totals.lineAmounts[index],
     })),
@@ -287,7 +288,8 @@ export type QuoteItemOption = {
   unit: string | null
   hsnCode: string | null
   description: string | null
-  // The selling price, or the price list's rate for it.
+  sellingPrice: number
+  // The price on the quotation's default price list (the selling price without one).
   rate: number
   intraTaxId: string | null
   interTaxId: string | null
@@ -342,48 +344,11 @@ export async function searchQuoteItems(
     query = query.or(`name.ilike.%${words}%,sku.ilike.%${words}%,hsn_code.ilike.%${words}%`)
   }
 
-  const [{ data: rows, error }, priceList] = await Promise.all([
-    query,
-    parsed.data.priceListId
-      ? supabase
-          .from("price_lists")
-          .select("price_list_type, percentage_type, percentage_value, round_off_to, decimal_places, transaction_type")
-          .eq("id", parsed.data.priceListId)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ])
+  const { data: rows, error } = await query
   if (error || !rows) return NO_ITEMS
   const hasMore = rows.length > ITEM_SEARCH_PAGE_SIZE
   const items = rows.slice(0, ITEM_SEARCH_PAGE_SIZE)
-
-  // Individual-item price lists: custom rates for the items found.
-  let customRates = new Map<string, number>()
-  const list = priceList.data
-  if (list?.transaction_type === "Sales" && list.price_list_type === "Individual Items" && items.length) {
-    const { data: rates } = await supabase
-      .from("price_list_items")
-      .select("item_id, rate")
-      .eq("price_list_id", parsed.data.priceListId)
-      .in(
-        "item_id",
-        items.map((item) => item.id)
-      )
-    customRates = new Map((rates ?? []).map((entry) => [entry.item_id, entry.rate]))
-  }
-
-  function rateFor(itemId: string, sellingPrice: number) {
-    if (!list || list.transaction_type !== "Sales") return sellingPrice
-    if (list.price_list_type === "Individual Items") return customRates.get(itemId) ?? sellingPrice
-    if (list.percentage_type && list.percentage_value !== null) {
-      return applyPriceAdjustment(sellingPrice, {
-        percentageType: list.percentage_type,
-        percentageValue: list.percentage_value,
-        roundOffTo: list.round_off_to,
-        decimalPlaces: list.decimal_places,
-      })
-    }
-    return sellingPrice
-  }
+  const listRates = await priceItemsFromList(supabase, parsed.data.priceListId, items)
 
   return {
     hasMore,
@@ -394,10 +359,95 @@ export async function searchQuoteItems(
       unit: item.unit,
       hsnCode: item.hsn_code,
       description: item.sales_description,
-      rate: rateFor(item.id, item.selling_price),
+      sellingPrice: item.selling_price,
+      rate: listRates.get(item.id) ?? item.selling_price,
       intraTaxId: item.intra_state_tax_id,
       interTaxId: item.inter_state_tax_id,
       isTaxable: item.tax_preference === "Taxable",
     })),
   }
+}
+
+// Each item's price on a sales price list: marked up or down for "All Items" lists, or
+// its custom rate on "Individual Items" lists (its selling price when it has none).
+async function priceItemsFromList(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  priceListId: string,
+  items: { id: string; selling_price: number }[]
+) {
+  const rates = new Map(items.map((item) => [item.id, item.selling_price]))
+  if (!priceListId || items.length === 0) return rates
+
+  const { data: list } = await supabase
+    .from("price_lists")
+    .select("price_list_type, percentage_type, percentage_value, round_off_to, decimal_places, transaction_type")
+    .eq("id", priceListId)
+    .maybeSingle()
+  if (!list || list.transaction_type !== "Sales") return rates
+
+  if (list.price_list_type === "Individual Items") {
+    const { data: custom } = await supabase
+      .from("price_list_items")
+      .select("item_id, rate")
+      .eq("price_list_id", priceListId)
+      .in(
+        "item_id",
+        items.map((item) => item.id)
+      )
+    for (const entry of custom ?? []) rates.set(entry.item_id, entry.rate)
+    return rates
+  }
+
+  if (list.percentage_type && list.percentage_value !== null) {
+    for (const item of items) {
+      rates.set(
+        item.id,
+        applyPriceAdjustment(item.selling_price, {
+          percentageType: list.percentage_type,
+          percentageValue: list.percentage_value,
+          roundOffTo: list.round_off_to,
+          decimalPlaces: list.decimal_places,
+        })
+      )
+    }
+  }
+  return rates
+}
+
+const linePricesSchema = z.object({
+  priceListId: z.union([z.uuid(), z.literal("")]),
+  itemIds: z.array(z.uuid()).min(1).max(200),
+})
+
+export type LinePrice = { sellingPrice: number; listRate: number }
+
+// Prices for quote lines when their price list changes: each item's selling price and its
+// price on the list (the same when there is no list).
+export async function getLinePrices(
+  priceListId: string,
+  itemIds: string[]
+): Promise<Record<string, LinePrice>> {
+  const parsed = linePricesSchema.safeParse({ priceListId, itemIds: [...new Set(itemIds)] })
+  if (!parsed.success) return {}
+  const session = await fetchSession()
+  if (
+    !session?.user.isActive ||
+    !(hasAccess(session, "quotations", "create") || hasAccess(session, "quotations", "edit"))
+  ) {
+    return {}
+  }
+
+  const supabase = await createClient()
+  const { data: items } = await supabase
+    .from("item_list")
+    .select("id, selling_price")
+    .in("id", parsed.data.itemIds)
+  if (!items?.length) return {}
+  const listRates = await priceItemsFromList(supabase, parsed.data.priceListId, items)
+  return Object.fromEntries(
+    items.map((item) => [
+      item.id,
+      { sellingPrice: item.selling_price, listRate: listRates.get(item.id) ?? item.selling_price },
+    ])
+  )
 }

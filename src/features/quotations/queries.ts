@@ -1,6 +1,7 @@
 import "server-only"
 
-import { QUOTATION_ATTACHMENTS_BUCKET } from "@/constants/quotations"
+import { ITEM_IMAGES_BUCKET } from "@/constants/items"
+import { COMPANY_ASSETS_BUCKET, QUOTATION_ATTACHMENTS_BUCKET } from "@/constants/quotations"
 import type { QuotationAttachmentView } from "@/features/quotations/components/quotation-attachments-field"
 import { TAX_RATE_COLUMNS } from "@/features/taxes/tax-rates"
 import type { createRequestClient } from "@/lib/supabase/server"
@@ -65,7 +66,7 @@ const DOCUMENT_CUSTOMER_COLUMNS =
   "display_name, company_name, gstin, billing_attention, billing_street1, billing_street2, billing_city, billing_state, billing_pin_code, billing_country, billing_phone" as const
 
 const DOCUMENT_COMPANY_COLUMNS =
-  "company_name, address, phone, email, gstin, bank_details, gst_state_code" as const
+  "company_name, address, phone, email, gstin, bank_details, gst_state_code, logo_path, signature_path" as const
 
 // Everything the quote document shows: the quotation and its lines (with how each line's
 // GST splits), the customer's billing details, the business's own details and the files.
@@ -84,28 +85,56 @@ export async function getQuotationDocument(supabase: Client, quotationId: string
   const quote = quoteResult.data
   if (!quote) return null
 
-  const [customerResult, salespersonResult] = await Promise.all([
+  const company = companyResult.data
+  const itemIds = [
+    ...new Set(linesResult.data.flatMap((line) => (line.item_id ? [line.item_id] : []))),
+  ]
+  const companyPaths = [company?.logo_path, company?.signature_path].filter(
+    (path): path is string => Boolean(path)
+  )
+
+  const [customerResult, itemImagesResult, companyUrls] = await Promise.all([
     supabase.from("customers").select(DOCUMENT_CUSTOMER_COLUMNS).eq("id", quote.customer_id).maybeSingle(),
-    quote.salesperson_id
+    itemIds.length
       ? supabase
-          .from("profiles")
-          .select("first_name, last_name")
-          .eq("id", quote.salesperson_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
+          .from("item_images")
+          .select("item_id, storage_path")
+          .in("item_id", itemIds)
+          .order("sort_order")
+      : Promise.resolve({ data: [] }),
+    signedUrls(supabase, COMPANY_ASSETS_BUCKET, companyPaths),
   ])
-  const salesperson = salespersonResult.data
+
+  // Each item's first picture, beside its lines.
+  const firstImagePath = new Map<string, string>()
+  for (const image of itemImagesResult.data ?? []) {
+    if (!firstImagePath.has(image.item_id)) firstImagePath.set(image.item_id, image.storage_path)
+  }
+  const imageUrls = await signedUrls(supabase, ITEM_IMAGES_BUCKET, [...firstImagePath.values()])
 
   return {
     quote,
-    lines: linesResult.data,
+    lines: linesResult.data.map((line) => {
+      const path = line.item_id ? firstImagePath.get(line.item_id) : undefined
+      return { ...line, imageUrl: (path && imageUrls.get(path)) || null }
+    }),
     customer: customerResult.data,
-    company: companyResult.data,
-    salespersonName: salesperson
-      ? [salesperson.first_name, salesperson.last_name].filter(Boolean).join(" ") || null
-      : null,
+    company,
+    logoUrl: (company?.logo_path && companyUrls.get(company.logo_path)) || null,
+    signatureUrl: (company?.signature_path && companyUrls.get(company.signature_path)) || null,
     attachments,
   }
+}
+
+// Short-lived links to files in a private bucket, keyed by path.
+async function signedUrls(supabase: Client, bucket: string, paths: string[]) {
+  if (paths.length === 0) return new Map<string, string>()
+  const { data } = await supabase.storage.from(bucket).createSignedUrls(paths, SIGNED_URL_SECONDS)
+  return new Map(
+    (data ?? []).flatMap((entry) =>
+      entry.path && entry.signedUrl ? [[entry.path, entry.signedUrl] as const] : []
+    )
+  )
 }
 
 export type QuotationDocumentData = NonNullable<Awaited<ReturnType<typeof getQuotationDocument>>>

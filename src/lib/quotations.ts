@@ -104,6 +104,18 @@ export function computeQuotationTotals(input: QuotationTotalsInput): QuotationTo
   }
 }
 
+// A line priced from a price list. A cheaper list price shows as a discount on the
+// selling price (10% off), so the customer sees what they save; a higher one (a markup
+// list) becomes the rate itself.
+export function priceFromList(sellingPrice: number, listRate: number) {
+  if (sellingPrice <= 0 || listRate >= sellingPrice) {
+    return { rate: listRate, discountPercent: 0 }
+  }
+  // 8 decimals (as stored), so the line comes to the list price to the paisa.
+  const discountPercent = Math.round((1 - listRate / sellingPrice) * 100 * 1e8) / 1e8
+  return { rate: sellingPrice, discountPercent }
+}
+
 // Which of an item's taxes applies: CGST + SGST when the place of supply is the
 // business's own state (or either isn't known yet), IGST for another state, none for
 // overseas customers.
