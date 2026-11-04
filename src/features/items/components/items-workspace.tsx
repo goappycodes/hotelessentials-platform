@@ -1,7 +1,6 @@
 "use client"
 
-import { Ellipsis, ImageIcon, Package, Plus } from "lucide-react"
-import Image from "next/image"
+import { Ellipsis, Package, Plus } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useCallback, useState } from "react"
@@ -10,10 +9,8 @@ import { countItems } from "@/actions/items"
 import { PageContainer } from "@/components/layout/page-container"
 import { ListFilterMenu } from "@/components/shared/list-filter-menu"
 import { ListPagination } from "@/components/shared/list-pagination"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
   EmptyDescription,
@@ -21,29 +18,18 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { ITEM_PARAM } from "@/constants/routes"
 import { ItemPanel } from "@/features/items/components/item-panel"
 import { ItemsActionsMenu } from "@/features/items/components/items-actions-menu"
 import { ItemsBulkActions } from "@/features/items/components/items-bulk-actions"
-// Hovering a row starts loading its details, so the click feels instant.
-import { prefetchItemDetail } from "@/features/items/item-detail-cache"
+import { ItemsSideList } from "@/features/items/components/items-side-list"
+import { ItemsTable } from "@/features/items/components/items-table"
 import {
   ITEM_STATUS_FILTER_OPTIONS,
   // ITEM_TYPE_FILTER_OPTIONS, // for the hidden Type filter
   ITEMS_LIST,
 } from "@/features/items/list-config"
-// formatQuantity is for the Stock on Hand column, switched off for now.
-import { formatCurrency /* , formatQuantity */ } from "@/lib/format"
-import { cn } from "@/lib/utils"
 
 const navItem = MODULE_NAV_ITEMS.items
 
@@ -63,19 +49,6 @@ export type ItemRow = {
   isActive: boolean
   thumbnail: string | null
 }
-
-const COLUMNS = [
-  { label: "Name" },
-  { label: "SKU" },
-  // Type is hidden for now; uncomment with the Type cell below.
-  // { label: "Type" },
-  { label: "HSN" },
-  // Inventory is switched off for now; uncomment with the Stock on Hand cell below.
-  // { label: "Stock on Hand", numeric: true },
-  { label: "Rate", numeric: true },
-  { label: "Purchase Rate", numeric: true },
-  { label: "Status" },
-]
 
 type ItemsWorkspaceProps = {
   rows: ItemRow[]
@@ -108,7 +81,6 @@ export function ItemsWorkspace({
   // Only items on this page count, so changing page, filters or search drops the rest.
   const selectedIds = checkedIds.filter((id) => rows.some((item) => item.id === id))
   const canSelect = canEdit || canDelete
-  const allSelected = rows.length > 0 && selectedIds.length === rows.length
 
   function toggle(itemId: string, checked: boolean) {
     setCheckedIds((ids) => (checked ? [...ids, itemId] : ids.filter((id) => id !== itemId)))
@@ -161,44 +133,7 @@ export function ItemsWorkspace({
               <ItemsActionsMenu entityLabel={navItem.title} canImport={canCreate} />
             </Suspense>
           </div>
-          <nav aria-label="Items" className="min-h-0 flex-1 overflow-y-auto">
-            {rows.map((item) => {
-              const isActive = item.id === openId
-              return (
-                <a
-                  key={item.id}
-                  href={hrefFor(item.id)}
-                  onClick={(event) => open(event, item.id)}
-                  onMouseEnter={() => prefetchItemDetail(item.id)}
-                  onFocus={() => prefetchItemDetail(item.id)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "flex gap-3 border-b px-3 py-2.5 text-sm transition-colors hover:bg-muted/60",
-                    isActive && "bg-sidebar-accent hover:bg-sidebar-accent"
-                  )}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span
-                      className={cn(
-                        "line-clamp-2 font-medium",
-                        !item.isActive && "text-muted-foreground"
-                      )}
-                    >
-                      {item.name}
-                    </span>
-                    {item.sku && (
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                        SKU: {item.sku}
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 tabular-nums">
-                    {item.salesEnabled ? formatCurrency(item.sellingPrice) : "—"}
-                  </span>
-                </a>
-              )
-            })}
-          </nav>
+          <ItemsSideList rows={rows} openId={openId} hrefFor={hrefFor} onOpen={open} />
         </aside>
         <section className="min-w-0 flex-1 overflow-y-auto">
           <ItemPanel
@@ -258,106 +193,15 @@ export function ItemsWorkspace({
             </EmptyHeader>
           </Empty>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                {canSelect && (
-                  <TableHead className="w-10 pr-0 pl-4">
-                    <Checkbox
-                      aria-label="Select all items on this page"
-                      checked={allSelected ? true : selectedIds.length > 0 ? "indeterminate" : false}
-                      onCheckedChange={(checked) =>
-                        setCheckedIds(checked === true ? rows.map((item) => item.id) : [])
-                      }
-                    />
-                  </TableHead>
-                )}
-                {COLUMNS.map((column) => (
-                  <TableHead
-                    key={column.label}
-                    className={cn(
-                      "h-10 px-4 text-xs font-medium tracking-wide text-muted-foreground uppercase",
-                      column.numeric && "text-right"
-                    )}
-                  >
-                    {column.label}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((item) => (
-                <TableRow
-                  key={item.id}
-                  className="relative"
-                  data-state={selectedIds.includes(item.id) ? "selected" : undefined}
-                >
-                  {canSelect && (
-                    // Just above the row-wide link (z-1), so ticking doesn't open the item,
-                    // but below the sticky header and its search dropdown (z-10).
-                    <TableCell className="relative z-[1] w-10 pr-0 pl-4">
-                      <Checkbox
-                        aria-label={`Select ${item.name}`}
-                        checked={selectedIds.includes(item.id)}
-                        onCheckedChange={(checked) => toggle(item.id, checked === true)}
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell className="px-4 py-3">
-                    {/* The link covers the whole row, so any cell opens the item. */}
-                    <a
-                      href={hrefFor(item.id)}
-                      onClick={(event) => open(event, item.id)}
-                      onMouseEnter={() => prefetchItemDetail(item.id)}
-                      onFocus={() => prefetchItemDetail(item.id)}
-                      className="flex items-center gap-3 font-medium text-primary after:absolute after:inset-0 hover:underline"
-                    >
-                      <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted text-muted-foreground">
-                        {item.thumbnail ? (
-                          <Image
-                            src={item.thumbnail}
-                            alt=""
-                            width={36}
-                            height={36}
-                            unoptimized
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          <ImageIcon className="size-4" />
-                        )}
-                      </span>
-                      <span className="max-w-64 truncate">{item.name}</span>
-                    </a>
-                  </TableCell>
-                  <TableCell className="px-4 text-muted-foreground">{item.sku ?? "—"}</TableCell>
-                  {/* Type is hidden for now; uncomment with the column above.
-                  <TableCell className="px-4">{item.type}</TableCell>
-                  */}
-                  <TableCell className="px-4 text-muted-foreground">
-                    {item.hsnCode ?? "—"}
-                  </TableCell>
-                  {/* Inventory is switched off for now; uncomment with the column above.
-                  <TableCell className="px-4 text-right tabular-nums">
-                    {item.stockOnHand === null ? "—" : formatQuantity(item.stockOnHand, item.unit)}
-                  </TableCell>
-                  */}
-                  <TableCell className="px-4 text-right tabular-nums">
-                    {item.salesEnabled ? formatCurrency(item.sellingPrice) : "—"}
-                  </TableCell>
-                  <TableCell className="px-4 text-right tabular-nums">
-                    {item.purchaseEnabled ? formatCurrency(item.costPrice) : "—"}
-                  </TableCell>
-                  <TableCell className="px-4">
-                    {item.isActive ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-700">Active</Badge>
-                    ) : (
-                      <Badge variant="destructive">Inactive</Badge>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ItemsTable
+            rows={rows}
+            canSelect={canSelect}
+            selectedIds={selectedIds}
+            onToggle={toggle}
+            onToggleAll={(checked) => setCheckedIds(checked ? rows.map((item) => item.id) : [])}
+            hrefFor={hrefFor}
+            onOpen={open}
+          />
         )}
       </Card>
       <ListPagination

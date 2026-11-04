@@ -165,6 +165,15 @@ export type Database = {
             referencedRelation: "items"
             referencedColumns: ["id"]
           },
+          // The same key seen through the item_list view (its id is items.id), so a list
+          // query can embed each item's images.
+          {
+            foreignKeyName: "item_images_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "item_list"
+            referencedColumns: ["id"]
+          },
         ]
       }
       items: {

@@ -6,20 +6,15 @@ import {
   ArrowUpNarrowWide,
   Download,
   Ellipsis,
-  RefreshCw,
-  RotateCcw,
-  Settings,
   Upload,
 } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useTransition } from "react"
+import { useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -38,8 +33,6 @@ export type ListActionsMenuProps = {
   // Instead of onExport, so server pages can pass it: a Route Handler that returns the
   // CSV (given ?scope= and, for the current view, the list's sort, filters and search).
   exportHref?: string
-  onPreferences?: () => void
-  onResetColumnWidth?: () => void
 }
 
 export function ListActionsMenu({
@@ -48,13 +41,9 @@ export function ListActionsMenu({
   onImport,
   onExport,
   exportHref,
-  onPreferences,
-  onResetColumnWidth,
 }: ListActionsMenuProps) {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const { query, setSort } = useListQuery(config)
-  const [isRefreshing, startRefresh] = useTransition()
 
   // A download link (the response is an attachment), so the page stays as it is.
   function download(scope: ExportScope) {
@@ -136,29 +125,6 @@ export function ListActionsMenu({
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={!onPreferences} onSelect={onPreferences}>
-          <Settings />
-          Preferences
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={isRefreshing}
-          onSelect={(event) => {
-            event.preventDefault()
-            startRefresh(() => router.refresh())
-          }}
-        >
-          <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />
-          Refresh List
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={!onResetColumnWidth}
-          onSelect={onResetColumnWidth}
-        >
-          <RotateCcw />
-          Reset Column Width
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

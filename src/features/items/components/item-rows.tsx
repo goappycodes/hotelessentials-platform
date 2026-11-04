@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { ItemRow } from "@/features/items/components/items-workspace"
 import { ITEMS_LIST } from "@/features/items/list-config"
-import { getItemThumbnails } from "@/features/items/queries"
+import { getSignedImageUrls } from "@/features/items/queries"
 import {
   applyListQuery,
   parseListQuery,
@@ -20,18 +20,26 @@ export async function getItemRows(searchParams: ListSearchParams) {
   const supabase = await createRequestClient()
   const query = parseListQuery(searchParams, ITEMS_LIST)
 
+  // One request: each item comes with the path of its first image, for the thumbnail.
+  // stock_on_hand is left out while inventory is switched off (it's worked out per row);
+  // add it back to the select when the Stock on Hand column returns.
   const { data, error } = await applyListQuery(
     supabase
       .from("item_list")
       .select(
-        "id, name, sku, type, unit, selling_price, cost_price, sales_enabled, purchase_enabled, is_active, hsn_code, stock_on_hand"
-      ),
+        "id, name, sku, type, unit, selling_price, cost_price, sales_enabled, purchase_enabled, is_active, hsn_code, images:item_images(storage_path)"
+      )
+      .order("sort_order", { referencedTable: "item_images" })
+      .limit(1, { referencedTable: "item_images" }),
     query
   )
   if (error) throw new Error("Failed to load items")
 
   const { rows, hasNextPage } = toListPage(data, query)
-  const thumbnails = await getItemThumbnails(supabase, rows.map((item) => item.id))
+  const thumbnails = await getSignedImageUrls(
+    supabase,
+    rows.flatMap((item) => item.images.map((image) => image.storage_path))
+  )
 
   return {
     hasNextPage,
@@ -44,13 +52,14 @@ export async function getItemRows(searchParams: ListSearchParams) {
         type: item.type,
         hsnCode: item.hsn_code,
         unit: item.unit,
-        stockOnHand: item.stock_on_hand,
+        // Not loaded while inventory is switched off (see the select above).
+        stockOnHand: null,
         sellingPrice: item.selling_price,
         costPrice: item.cost_price,
         salesEnabled: item.sales_enabled,
         purchaseEnabled: item.purchase_enabled,
         isActive: item.is_active,
-        thumbnail: thumbnails.get(item.id) ?? null,
+        thumbnail: (item.images[0] && thumbnails.get(item.images[0].storage_path)) ?? null,
       })
     ),
   }

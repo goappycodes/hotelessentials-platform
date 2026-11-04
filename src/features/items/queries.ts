@@ -45,25 +45,3 @@ export async function getItemImages(supabase: Client, itemId: string): Promise<I
     return url ? [{ id: image.id, url, fileName: image.file_name }] : []
   })
 }
-
-// The first image of each item, for list thumbnails.
-export async function getItemThumbnails(supabase: Client, itemIds: string[]) {
-  if (itemIds.length === 0) return new Map<string, string>()
-  const { data } = await supabase
-    .from("item_images")
-    .select("item_id, storage_path, sort_order")
-    .in("item_id", itemIds)
-    .order("sort_order")
-
-  const firstPaths = new Map<string, string>()
-  for (const image of data ?? []) {
-    if (!firstPaths.has(image.item_id)) firstPaths.set(image.item_id, image.storage_path)
-  }
-  const urls = await getSignedImageUrls(supabase, [...firstPaths.values()])
-  return new Map(
-    [...firstPaths].flatMap(([itemId, path]) => {
-      const url = urls.get(path)
-      return url ? [[itemId, url] as const] : []
-    })
-  )
-}
