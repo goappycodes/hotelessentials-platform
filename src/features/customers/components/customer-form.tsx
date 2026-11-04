@@ -23,6 +23,7 @@ import { FormFieldLabel, HORIZONTAL_FIELD_CLASS } from "@/components/shared/form
 import { FormInputField } from "@/components/shared/form-input-field"
 import { FormSelectField, toSelectOptions } from "@/components/shared/form-select-field"
 import { FormTextareaField } from "@/components/shared/form-textarea-field"
+import { PhoneInput } from "@/components/shared/phone-input"
 import { SubmitButton } from "@/components/shared/submit-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -349,8 +350,8 @@ function CustomerDetails({ disabled }: { disabled: boolean }) {
       <Field className={HORIZONTAL_FIELD_CLASS}>
         <FormFieldLabel htmlFor="workPhone" label="Phone" />
         <div className="grid gap-2 sm:grid-cols-2">
-          <RegisteredInput name="workPhone" label="Work Phone" placeholder="Work Phone" type="tel" />
-          <RegisteredInput name="mobile" label="Mobile" placeholder="Mobile" type="tel" />
+          <PhoneField name="workPhone" label="Work Phone" disabled={disabled} />
+          <PhoneField name="mobile" label="Mobile" disabled={disabled} />
         </div>
       </Field>
       <div className="max-w-[28rem]">
@@ -945,6 +946,38 @@ function RegisteredInput({
       {/* Contact rows show their errors below the cell instead. */}
       {error && !name.startsWith("contacts.") && <FieldError errors={[error]} />}
     </div>
+  )
+}
+
+// A phone number with a country code picker (India +91 by default).
+function PhoneField({
+  name,
+  label,
+  disabled,
+}: {
+  name: "workPhone" | "mobile"
+  label: string
+  disabled: boolean
+}) {
+  return (
+    <Controller
+      name={name}
+      render={({ field, fieldState }) => (
+        <div className="flex flex-col gap-1">
+          <PhoneInput
+            id={name}
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={label}
+            aria-label={label}
+            invalid={fieldState.invalid}
+            disabled={disabled}
+          />
+          {fieldState.error && <FieldError errors={[fieldState.error]} />}
+        </div>
+      )}
+    />
   )
 }
 
