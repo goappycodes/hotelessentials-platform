@@ -52,6 +52,22 @@ export function priceListRoute(id: string) {
   return `${ROUTES.priceLists}/${id}`
 }
 
+// Quotations open beside the list on /quotations (?quote=<id>), like items.
+export const QUOTATION_PARAM = "quote"
+
+export function quotationRoute(id: string) {
+  return `${ROUTES.quotations}?${QUOTATION_PARAM}=${id}`
+}
+
+export function quotationEditRoute(id: string) {
+  return `${ROUTES.quotations}/${id}/edit`
+}
+
+// The quote on its own, for printing or saving as PDF.
+export function quotationPrintRoute(id: string) {
+  return `/print/quotations/${id}`
+}
+
 export function customerRoute(id: string) {
   return `${ROUTES.customers}/${id}`
 }

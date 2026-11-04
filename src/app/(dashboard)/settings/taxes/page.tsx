@@ -9,7 +9,36 @@ import { AccessDenied } from "@/components/shared/access-denied"
 import { AccessGate } from "@/components/shared/access-gate"
 import { Button } from "@/components/ui/button"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
+import { BusinessStateCard } from "@/features/taxes/components/business-state-card"
+import { CompanyProfileCard } from "@/features/taxes/components/company-profile-card"
 import { TaxesTable, TaxesTableSkeleton } from "@/features/taxes/components/taxes-table"
+import { isAdminRole } from "@/lib/permissions"
+import { requireUser } from "@/lib/session"
+import { createRequestClient } from "@/lib/supabase/server"
+
+async function BusinessState() {
+  const [supabase, session] = await Promise.all([createRequestClient(), requireUser()])
+  const { data } = await supabase
+    .from("organization_settings")
+    .select("gst_state_code, company_name, address, phone, email, gstin, bank_details")
+    .maybeSingle()
+  return (
+    <>
+      <BusinessStateCard stateCode={data?.gst_state_code ?? null} />
+      <CompanyProfileCard
+        canEdit={isAdminRole(session.role)}
+        defaultValues={{
+          companyName: data?.company_name ?? "",
+          address: data?.address ?? "",
+          phone: data?.phone ?? "",
+          email: data?.email ?? "",
+          gstin: data?.gstin ?? "",
+          bankDetails: data?.bank_details ?? "",
+        }}
+      />
+    </>
+  )
+}
 
 const navItem = MODULE_NAV_ITEMS.taxes
 
@@ -41,6 +70,7 @@ export default function TaxesPage() {
       />
       <Suspense fallback={<TaxesTableSkeleton />}>
         <AccessGate scope={navItem.access} denied={<AccessDenied area="tax settings" />}>
+          <BusinessState />
           <TaxesTable />
         </AccessGate>
       </Suspense>

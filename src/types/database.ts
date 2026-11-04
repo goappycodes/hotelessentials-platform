@@ -108,6 +108,175 @@ export type Database = {
           },
         ]
       }
+      organization_settings: {
+        Row: {
+          id: boolean
+          // GST state code of the business, e.g. "19"; null until set.
+          gst_state_code: string | null
+          // Printed on quotations.
+          company_name: string | null
+          address: string | null
+          phone: string | null
+          email: string | null
+          gstin: string | null
+          bank_details: string | null
+          updated_at: string
+        }
+        Insert: Partial<Database["public"]["Tables"]["organization_settings"]["Row"]>
+        Update: Partial<Database["public"]["Tables"]["organization_settings"]["Row"]>
+        Relationships: []
+      }
+      quotations: {
+        Row: {
+          id: string
+          quote_number: string
+          reference_number: string | null
+          customer_id: string
+          customer_name: string
+          quote_date: string
+          expiry_date: string | null
+          salesperson_id: string | null
+          subject: string | null
+          price_list_id: string | null
+          place_of_supply: string | null
+          discount_level: Database["public"]["Enums"]["discount_level"]
+          discount_value: number
+          discount_is_percent: boolean
+          is_discount_before_tax: boolean
+          adjustment: number
+          adjustment_description: string | null
+          notes: string | null
+          terms: string | null
+          status: Database["public"]["Enums"]["quotation_status"]
+          sub_total: number
+          discount_total: number
+          tax_total: number
+          total: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        // Saved through public.save_quotation.
+        Insert: Partial<Database["public"]["Tables"]["quotations"]["Row"]> & {
+          customer_id: string
+          customer_name: string
+        }
+        Update: Partial<Database["public"]["Tables"]["quotations"]["Row"]>
+        Relationships: [
+          {
+            foreignKeyName: "quotations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_attachments: {
+        Row: {
+          id: string
+          quotation_id: string
+          storage_path: string
+          file_name: string
+          content_type: string | null
+          file_size: number | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          quotation_id: string
+          storage_path: string
+          file_name: string
+          content_type?: string | null
+          file_size?: number | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          quotation_id?: string
+          storage_path?: string
+          file_name?: string
+          content_type?: string | null
+          file_size?: number | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_attachments_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_items: {
+        Row: {
+          id: string
+          quotation_id: string
+          item_id: string | null
+          name: string
+          description: string | null
+          hsn_code: string | null
+          unit: string | null
+          quantity: number
+          rate: number
+          discount_value: number
+          discount_is_percent: boolean
+          tax_id: string | null
+          tax_name: string | null
+          tax_rate: number | null
+          amount: number
+          sort_order: number
+        }
+        Insert: Partial<Database["public"]["Tables"]["quotation_items"]["Row"]> & {
+          quotation_id: string
+          name: string
+          quantity: number
+          rate: number
+        }
+        Update: Partial<Database["public"]["Tables"]["quotation_items"]["Row"]>
+        Relationships: [
+          {
+            foreignKeyName: "quotation_items_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_items_tax_id_fkey"
+            columns: ["tax_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hsn_codes: {
         Row: {
           id: string
@@ -602,6 +771,22 @@ export type Database = {
       }
     }
     Functions: {
+      // The number the next new quotation gets (null without quotations create access).
+      next_quote_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string | null
+      }
+      save_quotation: {
+        Args: {
+          target_id: string | null
+          // quotations columns, totals included (see actions/quotations.ts)
+          quotation: Json
+          // [{ item_id, name, description, hsn_code, unit, quantity, rate, discount_value,
+          //    discount_is_percent, tax_id, amount }]
+          items: Json
+        }
+        Returns: string
+      }
       save_customer: {
         Args: {
           target_id: string | null
@@ -659,6 +844,8 @@ export type Database = {
       adjustment_mode: "Quantity Adjustment" | "Value Adjustment"
       adjustment_status: "Draft" | "Adjusted"
       customer_tax_preference: "Taxable" | "Tax Exempt"
+      discount_level: "Transaction" | "Line Item"
+      quotation_status: "Draft" | "Sent" | "Accepted" | "Declined"
       customer_type: "Business" | "Individual"
       gst_treatment:
         | "Registered Business - Regular"
