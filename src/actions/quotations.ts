@@ -12,7 +12,9 @@ import {
 import { QUOTATION_STATUSES, QUOTATIONS_LIST } from "@/features/quotations/list-config"
 import {
   getQuotationDocument,
+  QUOTE_CUSTOMER_COLUMNS,
   type QuotationDocumentData,
+  type QuoteCustomer,
 } from "@/features/quotations/queries"
 import { TAX_RATE_COLUMNS } from "@/features/taxes/tax-rates"
 import { applyListFilters, parseListQuery } from "@/lib/list-query"
@@ -22,7 +24,11 @@ import { computeQuotationTotals } from "@/lib/quotations"
 import { fetchSession } from "@/lib/session"
 import { getDatabaseErrorMessage } from "@/lib/supabase/database-errors"
 import { createClient } from "@/lib/supabase/server"
-import { quotationSchema, type QuotationInput } from "@/lib/validations/quotation"
+import {
+  MAX_QUOTATION_LINES,
+  quotationSchema,
+  type QuotationInput,
+} from "@/lib/validations/quotation"
 import type { ActionResult } from "@/types/actions"
 
 const INVALID_INPUT = "Please check the form and try again."
@@ -473,9 +479,55 @@ async function priceItemsFromList(
   return rates
 }
 
+export type QuoteCustomerPage = { customers: QuoteCustomer[]; hasMore: boolean }
+
+const customerSearchSchema = z.object({
+  term: z.string().trim().max(100),
+  offset: z.number().int().min(0).max(100000),
+})
+
+// Active customers for the quotation's customer box, matching the name, company or GSTIN.
+// `offset` pages through them, ITEM_SEARCH_PAGE_SIZE at a time.
+export async function searchQuoteCustomers(term: string, offset = 0): Promise<QuoteCustomerPage> {
+  const parsed = customerSearchSchema.safeParse({ term, offset })
+  const none: QuoteCustomerPage = { customers: [], hasMore: false }
+  if (!parsed.success) return none
+  const session = await fetchSession()
+  if (
+    !session?.user.isActive ||
+    !(hasAccess(session, "quotations", "create") || hasAccess(session, "quotations", "edit"))
+  ) {
+    return none
+  }
+
+  const supabase = await createClient()
+  // Anything may sit between words, so "PAN GREY" finds "PAN (GREY)".
+  const words = parsed.data.term.replace(/[%_,()]/g, " ").trim().replace(/\s+/g, "%")
+  let query = supabase
+    .from("customers")
+    .select(QUOTE_CUSTOMER_COLUMNS)
+    .eq("is_active", true)
+    .order("display_name")
+    .order("id")
+    // One extra row tells whether there are more.
+    .range(parsed.data.offset, parsed.data.offset + ITEM_SEARCH_PAGE_SIZE)
+  if (words) {
+    query = query.or(
+      `display_name.ilike.%${words}%,company_name.ilike.%${words}%,gstin.ilike.%${words}%`
+    )
+  }
+
+  const { data, error } = await query
+  if (error || !data) return none
+  return {
+    customers: data.slice(0, ITEM_SEARCH_PAGE_SIZE),
+    hasMore: data.length > ITEM_SEARCH_PAGE_SIZE,
+  }
+}
+
 const linePricesSchema = z.object({
   priceListId: z.union([z.uuid(), z.literal("")]),
-  itemIds: z.array(z.uuid()).min(1).max(200),
+  itemIds: z.array(z.uuid()).min(1).max(MAX_QUOTATION_LINES),
 })
 
 export type LinePrice = { sellingPrice: number; listRate: number }

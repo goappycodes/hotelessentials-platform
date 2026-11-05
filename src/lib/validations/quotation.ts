@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { MONEY_PATTERN, MONEY_PATTERN_MESSAGE, QUANTITY_PATTERN } from "@/lib/format"
 
-export const MAX_QUOTATION_LINES = 200
+export const MAX_QUOTATION_LINES = 300
 
 const text = (max: number, label: string) =>
   z.string().trim().max(max, `${label} must be at most ${max} characters`)

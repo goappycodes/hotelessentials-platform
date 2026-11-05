@@ -20,6 +20,12 @@ export const EMPTY_LINE: QuotationLineInput = {
   itemInterTaxId: "",
 }
 
+// A row nothing was entered in: the quantity starts at 1, so it doesn't count. These are
+// left out when saving (a new row appears as soon as the last one is filled).
+export function isEmptyLine(line: QuotationLineInput) {
+  return !line.itemId && !line.name.trim() && !line.rate.trim()
+}
+
 export function newQuotationInput(today: string): QuotationInput {
   return {
     customerId: "",

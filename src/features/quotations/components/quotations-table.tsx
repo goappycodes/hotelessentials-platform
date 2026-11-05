@@ -58,9 +58,9 @@ export function QuotationsTable({
                 {quote.quoteNumber}
               </a>
             </TableCell>
-            <TableCell className="px-4 text-muted-foreground">
+            {/* <TableCell className="px-4 text-muted-foreground">
               {quote.referenceNumber ?? "—"}
-            </TableCell>
+            </TableCell> */}
             <TableCell className="max-w-64 truncate px-4">{quote.customerName}</TableCell>
             <TableCell className="px-4">
               <QuotationStatusBadge status={quote.status} isExpired={quote.isExpired} />

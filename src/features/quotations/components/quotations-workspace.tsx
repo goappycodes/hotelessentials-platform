@@ -21,6 +21,7 @@ import {
 import { MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { QUOTATION_PARAM } from "@/constants/routes"
 import { QuotationPanel } from "@/features/quotations/components/quotation-panel"
+import { QuotationsActionsMenu } from "@/features/quotations/components/quotations-actions-menu"
 import { QuotationsSideList } from "@/features/quotations/components/quotations-side-list"
 import { QuotationsTable } from "@/features/quotations/components/quotations-table"
 import {
@@ -102,6 +103,7 @@ export function QuotationsWorkspace({
                 </Link>
               </Button>
             )}
+            <QuotationsActionsMenu entityLabel={navItem.title} canImport={canCreate} />
           </div>
           <QuotationsSideList rows={rows} openId={openId} hrefFor={hrefFor} onOpen={open} />
         </aside>

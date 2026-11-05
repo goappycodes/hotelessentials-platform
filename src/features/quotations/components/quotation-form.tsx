@@ -9,12 +9,12 @@ import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form
 import { toast } from "sonner"
 
 import { saveQuotation } from "@/actions/quotations"
-import { FormAutocompleteField } from "@/components/shared/form-autocomplete-field"
 import { FormComboboxField } from "@/components/shared/form-combobox-field"
 import { FormError } from "@/components/shared/form-error"
 import { FieldHint, HORIZONTAL_FIELD_CLASS } from "@/components/shared/form-field-label"
 import { FormInputField } from "@/components/shared/form-input-field"
 import { FormTextareaField } from "@/components/shared/form-textarea-field"
+import { UnsavedChangesGuard } from "@/components/shared/unsaved-changes-guard"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -34,8 +34,10 @@ import {
 // TDS / TCS is hidden for now; this comes back with it.
 // import { DirectTaxField } from "@/features/quotations/components/direct-tax-field"
 import { QuotationItemsTable } from "@/features/quotations/components/quotation-items-table"
-import type { QuotationFormOptions } from "@/features/quotations/queries"
+import { QuoteCustomerField } from "@/features/quotations/components/quote-customer-field"
+import type { QuotationFormOptions, QuoteCustomer } from "@/features/quotations/queries"
 import { invalidateQuotationDetail } from "@/features/quotations/quotation-detail-cache"
+import { isEmptyLine } from "@/features/quotations/quotation-input"
 import { formatCurrency } from "@/lib/format"
 import { computeQuotationTotals, defaultTaxIdFor } from "@/lib/quotations"
 import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
@@ -61,6 +63,8 @@ type QuotationFormProps = {
   | {
       mode: "edit"
       quotationId: string
+      // The quotation's customer (others are searched in the customer box).
+      customer: QuoteCustomer | null
       attachments: QuotationAttachmentView[]
       // Users who can view but not edit quotations see the form read-only.
       readOnly: boolean
@@ -80,6 +84,7 @@ export function QuotationForm(props: QuotationFormProps) {
   const [error, setError] = useState<string>()
   const [savedFiles, setSavedFiles] = useState(mode === "edit" ? props.attachments : [])
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([])
+  const [customer, setCustomer] = useState(mode === "edit" ? props.customer : null)
   // TDS / TCS rates, with any added from this form. (The TDS / TCS row is hidden for now;
   // setDirectTaxes comes back with it.)
   const [directTaxes /* , setDirectTaxes */] = useState(options.directTaxes)
@@ -94,7 +99,6 @@ export function QuotationForm(props: QuotationFormProps) {
   const { control, setValue, getValues } = form
 
   const values = useWatch({ control })
-  const customer = options.customers.find((entry) => entry.id === values.customerId)
   const isOverseas = customer?.gst_treatment === "Overseas"
 
   const totals = computeQuotationTotals({
@@ -159,7 +163,7 @@ export function QuotationForm(props: QuotationFormProps) {
   }, [values.placeOfSupply])
 
   function save(status: Enums<"quotation_status"> | null, label: typeof savingAs) {
-    return form.handleSubmit((input) => {
+    const submit = form.handleSubmit((input) => {
       setError(undefined)
       setSavingAs(label)
       startTransition(async () => {
@@ -199,16 +203,18 @@ export function QuotationForm(props: QuotationFormProps) {
         router.refresh()
       })
     }, scrollToFirstInvalid)
+
+    return (event?: React.BaseSyntheticEvent) => {
+      // Rows left empty aren't part of the quote. One stays, to ask for an item.
+      const lines = getValues("lines")
+      const filled = lines.filter((line) => !isEmptyLine(line))
+      if (filled.length < lines.length) {
+        setValue("lines", filled.length > 0 ? filled : lines.slice(0, 1))
+      }
+      return submit(event)
+    }
   }
 
-  const customerOptions = options.customers
-    .filter((entry) => entry.is_active || entry.id === values.customerId)
-    .map((entry) => ({
-      value: entry.id,
-      label: entry.company_name && entry.company_name !== entry.display_name
-        ? `${entry.display_name} (${entry.company_name})`
-        : entry.display_name,
-    }))
   const salespersonOptions = [
     { value: "", label: "None" },
     ...options.salespeople
@@ -224,6 +230,9 @@ export function QuotationForm(props: QuotationFormProps) {
 
   return (
     <FormProvider {...form}>
+      <UnsavedChangesGuard
+        when={!readOnly && !isPending && (form.formState.isDirty || pendingFiles.length > 0)}
+      />
       <form
         onSubmit={save(mode === "edit" ? null : "Draft", mode === "edit" ? "update" : "Draft")}
         noValidate
@@ -239,14 +248,9 @@ export function QuotationForm(props: QuotationFormProps) {
         <fieldset disabled={disabled} className="contents">
           <Card className="gap-0 py-0">
             <FieldGroup className="max-w-3xl gap-4 p-6">
-              <FormAutocompleteField
-                control={control}
-                name="customerId"
-                label="Customer Name"
-                orientation="horizontal"
-                required
-                placeholder="Type or click to select a customer"
-                options={customerOptions}
+              <QuoteCustomerField
+                selected={customer}
+                onSelectedChange={setCustomer}
                 disabled={disabled}
               />
               {customer && (

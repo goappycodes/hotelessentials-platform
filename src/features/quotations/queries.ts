@@ -5,34 +5,40 @@ import { COMPANY_ASSETS_BUCKET, QUOTATION_ATTACHMENTS_BUCKET } from "@/constants
 import type { QuotationAttachmentView } from "@/features/quotations/components/quotation-attachments-field"
 import { TAX_RATE_COLUMNS } from "@/features/taxes/tax-rates"
 import type { createRequestClient } from "@/lib/supabase/server"
+import type { Tables } from "@/types/database"
 
 type Client = Awaited<ReturnType<typeof createRequestClient>>
 
-// Supabase returns at most this many rows per request.
-const PAGE_SIZE = 1000
+// What a quotation takes from its customer: place of supply, price list and GST details.
+export const QUOTE_CUSTOMER_COLUMNS =
+  "id, display_name, company_name, email, gstin, gst_treatment, place_of_supply, price_list_id, is_active" as const
 
-// Every customer for the customer picker (read page by page), with what the quotation
-// takes from them: place of supply, price list and GST details.
-async function getCustomerOptions(supabase: Client) {
-  const customers = []
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from("customers")
-      .select("id, display_name, company_name, email, gstin, gst_treatment, place_of_supply, price_list_id, is_active")
-      .order("display_name")
-      .order("id")
-      .range(from, from + PAGE_SIZE - 1)
-    if (error) throw new Error("Failed to load customers")
-    customers.push(...data)
-    if (data.length < PAGE_SIZE) break
-  }
-  return customers
+export type QuoteCustomer = Pick<
+  Tables<"customers">,
+  | "id"
+  | "display_name"
+  | "company_name"
+  | "email"
+  | "gstin"
+  | "gst_treatment"
+  | "place_of_supply"
+  | "price_list_id"
+  | "is_active"
+>
+
+// One customer, for a quotation being edited. New ones are searched as you type.
+export async function getQuoteCustomer(supabase: Client, customerId: string) {
+  const { data } = await supabase
+    .from("customers")
+    .select(QUOTE_CUSTOMER_COLUMNS)
+    .eq("id", customerId)
+    .maybeSingle()
+  return data
 }
 
 // Everything the quotation form picks from.
 export async function getQuotationFormOptions(supabase: Client) {
-  const [customers, salespeople, priceLists, taxes, settings, directTaxes] = await Promise.all([
-    getCustomerOptions(supabase),
+  const [salespeople, priceLists, taxes, settings, directTaxes] = await Promise.all([
     supabase.from("profiles").select("id, first_name, last_name, is_active").order("first_name"),
     supabase
       .from("price_lists")
@@ -46,7 +52,6 @@ export async function getQuotationFormOptions(supabase: Client) {
   if (salespeople.error || taxes.error) throw new Error("Failed to load the quotation form")
 
   return {
-    customers,
     salespeople: salespeople.data.map((person) => ({
       id: person.id,
       name: [person.first_name, person.last_name].filter(Boolean).join(" ") || "Unnamed user",

@@ -7,10 +7,8 @@ import { AccessDenied } from "@/components/shared/access-denied"
 import { MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { QuotationDocument } from "@/features/quotations/components/quotation-document"
 import { QuotationDocumentSkeleton } from "@/features/quotations/components/quotation-panel"
-import { isQuotationExpired } from "@/features/quotations/components/quotation-status-badge"
 import { PrintToolbar } from "@/features/quotations/components/print-toolbar"
 import { getQuotationDocument } from "@/features/quotations/queries"
-import { todayInIndia } from "@/features/quotations/quotation-input"
 import { hasAccess } from "@/lib/permissions"
 import { requireUser } from "@/lib/session"
 import { createRequestClient } from "@/lib/supabase/server"
@@ -43,11 +41,7 @@ async function PrintQuotation({ params }: Pick<PageProps<"/print/quotations/[id]
     <>
       <PrintToolbar title={data.quote.quote_number} />
       <div className="mx-auto max-w-[210mm] border bg-white shadow-sm print:border-0 print:shadow-none">
-        <QuotationDocument
-          data={data}
-          isExpired={isQuotationExpired(data.quote, todayInIndia())}
-          className="print:p-0"
-        />
+        <QuotationDocument data={data} showStatus={false} className="print:p-0" />
       </div>
     </>
   )

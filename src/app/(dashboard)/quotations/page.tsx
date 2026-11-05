@@ -6,6 +6,7 @@ import { PageHeader, PageHeaderSkeleton } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
 import { ListPageActions } from "@/components/shared/list-page-actions"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
+import { QuotationsActionsMenu } from "@/features/quotations/components/quotations-actions-menu"
 import { QuotationsTableSkeleton } from "@/features/quotations/components/quotations-table"
 import { QuotationsWorkspace } from "@/features/quotations/components/quotations-workspace"
 import { QUOTATIONS_LIST } from "@/features/quotations/list-config"
@@ -43,6 +44,12 @@ async function Quotations({ searchParams }: Pick<PageProps<"/quotations">, "sear
             create={hasAccess(session, navItem.access, "create") ? navItem.create : undefined}
             entityLabel={navItem.title}
             config={QUOTATIONS_LIST}
+            menu={
+              <QuotationsActionsMenu
+                entityLabel={navItem.title}
+                canImport={hasAccess(session, navItem.access, "create")}
+              />
+            }
           />
         )
       }

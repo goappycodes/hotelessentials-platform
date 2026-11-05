@@ -114,6 +114,15 @@ export function QuotationItemsTable({
     set(`lines.${index}.taxId`, taxId ?? "")
     set(`lines.${index}.itemIntraTaxId`, item.isTaxable ? (item.intraTaxId ?? "") : "")
     set(`lines.${index}.itemInterTaxId`, item.isTaxable ? (item.interTaxId ?? "") : "")
+    addRowAfterLast(index)
+  }
+
+  // Filling the last row brings up the next one, so items can be added one after another.
+  // Focus stays put, for the row's quantity. Rows left empty are dropped when saving.
+  function addRowAfterLast(index: number) {
+    if (index === fields.length - 1 && fields.length < MAX_QUOTATION_LINES) {
+      append({ ...EMPTY_LINE }, { shouldFocus: false })
+    }
   }
 
   // Prices item lines from a price list: the rate and the discount it gives.
@@ -219,6 +228,7 @@ export function QuotationItemsTable({
                     set(`lines.${index}.itemInterTaxId`, "")
                     set(`lines.${index}.hsnCode`, "")
                     set(`lines.${index}.name`, name)
+                    if (name.trim()) addRowAfterLast(index)
                   }}
                   register={register}
                   set={set}

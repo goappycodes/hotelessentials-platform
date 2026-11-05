@@ -22,6 +22,7 @@ export const ROUTES = {
   customersExport: "/customers/export",
   quotations: "/quotations",
   quotationsAdd: "/quotations/add",
+  quotationsExport: "/quotations/export",
   salesOrders: "/sales-orders",
   salesOrdersAdd: "/sales-orders/add",
   despatch: "/despatch",

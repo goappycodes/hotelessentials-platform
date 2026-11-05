@@ -43,13 +43,24 @@ type SidebarContextProps = {
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
 
+const subscribeToNothing = () => () => {}
+
 function useSidebar() {
   const context = React.useContext(SidebarContext)
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider.")
   }
 
-  return context
+  // False only while this component hydrates. The provider hydrates first and may already
+  // know it's a phone, but the sidebar sits in a Suspense boundary that hydrates later and
+  // must match the server's desktop HTML first; it switches straight after.
+  const isHydrated = React.useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false
+  )
+
+  return { ...context, isMobile: context.isMobile && isHydrated }
 }
 
 function SidebarProvider({

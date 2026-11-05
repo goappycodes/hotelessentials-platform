@@ -14,31 +14,31 @@ import {
   UsersRound,
   Warehouse,
   type LucideIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-import { ROUTES } from "@/constants/routes"
-import type { AccessScope } from "@/lib/permissions"
-import type { SearchScope } from "@/types/search"
+import { ROUTES } from "@/constants/routes";
+import type { AccessScope } from "@/lib/permissions";
+import type { SearchScope } from "@/types/search";
 
 export type NavItem = {
-  title: string
-  href: string
-  icon: LucideIcon
-  description: string
-  create?: { href: string; title: string }
+  title: string;
+  href: string;
+  icon: LucideIcon;
+  description: string;
+  create?: { href: string; title: string };
   // Who may open it; items without one are open to every signed-in user.
-  access?: AccessScope
+  access?: AccessScope;
   // Modules with this set get the header search: suggestions from `searchRecords` for
   // `scope`, and Enter filters the list (`?q=`, so the ListConfig needs `search.columns`).
-  search?: { placeholder: string; scope: SearchScope }
-}
+  search?: { placeholder: string; scope: SearchScope };
+};
 
 export const DASHBOARD_NAV_ITEM: NavItem = {
   title: "Dashboard",
   href: ROUTES.dashboard,
   icon: House,
-  description: "Overview of your company's activity.",
-}
+  description: "Overview of Hotel Essentials's activity.",
+};
 
 export const MODULE_NAV_ITEMS = {
   items: {
@@ -48,7 +48,10 @@ export const MODULE_NAV_ITEMS = {
     description: "Manage your product catalogue, units and pricing.",
     create: { href: ROUTES.itemsAdd, title: "New Item" },
     access: "items",
-    search: { placeholder: "Search items by name, SKU or HSN code", scope: "items" },
+    search: {
+      placeholder: "Search items by name, SKU or HSN code",
+      scope: "items",
+    },
   },
   priceLists: {
     title: "Price Lists",
@@ -121,10 +124,14 @@ export const MODULE_NAV_ITEMS = {
     title: "Users",
     href: ROUTES.users,
     icon: UsersRound,
-    description: "Manage who can sign in, their roles and what they can access.",
+    description:
+      "Manage who can sign in, their roles and what they can access.",
     create: { href: ROUTES.usersAdd, title: "New User" },
     access: "admin",
-    search: { placeholder: "Search users by name, email or phone", scope: "users" },
+    search: {
+      placeholder: "Search users by name, email or phone",
+      scope: "users",
+    },
   },
   taxes: {
     title: "Taxes",
@@ -138,21 +145,22 @@ export const MODULE_NAV_ITEMS = {
     title: "Direct Taxes",
     href: ROUTES.directTaxes,
     icon: Landmark,
-    description: "TDS and TCS rates that quotations can apply under the sub total.",
+    description:
+      "TDS and TCS rates that quotations can apply under the sub total.",
     access: "admin",
   },
-} satisfies Record<string, NavItem>
+} satisfies Record<string, NavItem>;
 
 export type NavGroup = {
-  title: string
-  icon: LucideIcon
-  items: NavItem[]
-}
+  title: string;
+  icon: LucideIcon;
+  items: NavItem[];
+};
 
-export type SidebarNavEntry = NavItem | NavGroup
+export type SidebarNavEntry = NavItem | NavGroup;
 
 export function isNavGroup(entry: SidebarNavEntry): entry is NavGroup {
-  return "items" in entry
+  return "items" in entry;
 }
 
 export const SIDEBAR_NAV: SidebarNavEntry[] = [
@@ -182,15 +190,17 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
   {
     title: "Settings",
     icon: Settings,
-    // Direct Taxes (TDS / TCS) is hidden for now; to show it again, use this instead:
+    // Users and Direct Taxes (TDS / TCS) are hidden for now. To show them again, add them
+    // back here, and delete src/app/(dashboard)/users/layout.tsx for Users:
     // items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes, MODULE_NAV_ITEMS.directTaxes],
-    items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes],
+    items: [MODULE_NAV_ITEMS.taxes],
   },
-]
+];
 
 // Every page in the sidebar, flattened, with its group's title.
-export const NAV_ITEMS: (NavItem & { group?: string })[] = SIDEBAR_NAV.flatMap((entry) =>
-  isNavGroup(entry)
-    ? entry.items.map((item) => ({ ...item, group: entry.title }))
-    : [entry]
-)
+export const NAV_ITEMS: (NavItem & { group?: string })[] = SIDEBAR_NAV.flatMap(
+  (entry) =>
+    isNavGroup(entry)
+      ? entry.items.map((item) => ({ ...item, group: entry.title }))
+      : [entry],
+);

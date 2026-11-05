@@ -91,6 +91,9 @@ export function ItemsTable({
     overscan: OVERSCAN,
     scrollMargin,
     initialRect: SERVER_WINDOW,
+    // Start from the top like the server, even when the browser restored a scroll position
+    // on reload (the default reads window.scrollY); the real position follows on mount.
+    initialOffset: 0,
     getItemKey: (index) => rows[index]?.id ?? index,
   })
 

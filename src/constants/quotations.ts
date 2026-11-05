@@ -1,3 +1,7 @@
+// Quotations sent to the server at a time by a CSV import. Each is saved on its own, so
+// this keeps one request short.
+export const QUOTATION_IMPORT_BATCH_SIZE = 25
+
 // Files attached to quotations (Zoho: up to 10 files, 10 MB each).
 export const QUOTATION_ATTACHMENTS_BUCKET = "quotation-attachments"
 export const MAX_QUOTATION_ATTACHMENTS = 10

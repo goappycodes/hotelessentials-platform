@@ -37,7 +37,7 @@ export const QUOTATION_STATUS_FILTER_OPTIONS =QUOTATION_STATUSES.map((status) =>
 export const QUOTATION_COLUMNS = [
   "Date",
   "Quote Number",
-  "Reference Number",
+  // "Reference Number",
   "Customer Name",
   "Status",
   "Amount",

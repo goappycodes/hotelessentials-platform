@@ -23,6 +23,7 @@ import {
 import {
   getQuotationAttachments,
   getQuotationFormOptions,
+  getQuoteCustomer,
 } from "@/features/quotations/queries"
 import { todayInIndia, toQuotationInput } from "@/features/quotations/quotation-input"
 import { formatCurrency } from "@/lib/format"
@@ -84,7 +85,12 @@ async function QuotationDetails({ params }: Pick<PageProps<"/quotations/[id]/edi
       .order("sort_order"),
     getQuotationFormOptions(supabase),
   ])
-  const attachments = quoteResult.data ? await getQuotationAttachments(supabase, id) : []
+  const [attachments, customer] = quoteResult.data
+    ? await Promise.all([
+        getQuotationAttachments(supabase, id),
+        getQuoteCustomer(supabase, quoteResult.data.customer_id),
+      ])
+    : [[], null]
   if (quoteResult.error || linesResult.error) throw new Error("Failed to load the quotation")
 
   const quote = quoteResult.data
@@ -109,6 +115,7 @@ async function QuotationDetails({ params }: Pick<PageProps<"/quotations/[id]/edi
         quotationId={quote.id}
         options={options}
         defaultValues={toQuotationInput(quote, linesResult.data)}
+        customer={customer}
         attachments={attachments}
         readOnly={!hasAccess(session, navItem.access, "edit")}
       />
