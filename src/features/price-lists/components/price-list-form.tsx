@@ -43,6 +43,7 @@ import { PriceListItemsField } from "@/features/price-lists/components/price-lis
 import type { PriceListItemOption } from "@/features/price-lists/queries"
 import { formatCurrency } from "@/lib/format"
 import { applyPriceAdjustment } from "@/lib/price-lists"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import { priceListSchema, type PriceListInput } from "@/lib/validations/price-list"
 
 const PREVIEW_RATE = 1000
@@ -83,6 +84,8 @@ export function PriceListForm(props: PriceListFormProps) {
 
   const form = useForm<PriceListInput>({
     resolver: zodResolver(priceListSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: mode === "edit" ? props.defaultValues : NEW_PRICE_LIST,
   })
   const [priceListType, transactionType, percentageType, percentageValue, roundOffTo, decimalPlaces] =
@@ -123,7 +126,7 @@ export function PriceListForm(props: PriceListFormProps) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
+    <form onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)} noValidate className="flex flex-col gap-6">
       <FormError message={error} />
       {readOnly && (
         <Alert>

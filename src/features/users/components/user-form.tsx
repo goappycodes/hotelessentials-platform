@@ -47,6 +47,7 @@ import {
 import { ROUTES } from "@/constants/routes"
 import { PermissionsMatrix } from "@/features/users/components/permissions-matrix"
 import { getRoleDefaultPermissions, isAdminRole } from "@/lib/permissions"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import { userFormSchemas, type UserFormValues } from "@/lib/validations/user"
 
 type UserFormProps = {
@@ -87,6 +88,8 @@ export function UserForm(props: UserFormProps) {
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchemas[mode]) as Resolver<UserFormValues>,
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: mode === "edit" ? props.defaultValues : NEW_USER,
   })
   const role = useWatch({ control: form.control, name: "role" })
@@ -115,7 +118,7 @@ export function UserForm(props: UserFormProps) {
 
   return (
     <form
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)}
       noValidate
       className="flex flex-col gap-6"
     >

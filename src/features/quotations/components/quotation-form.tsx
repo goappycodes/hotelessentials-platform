@@ -38,6 +38,7 @@ import type { QuotationFormOptions } from "@/features/quotations/queries"
 import { invalidateQuotationDetail } from "@/features/quotations/quotation-detail-cache"
 import { formatCurrency } from "@/lib/format"
 import { computeQuotationTotals, defaultTaxIdFor } from "@/lib/quotations"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import { quotationSchema, type QuotationInput } from "@/lib/validations/quotation"
 import type { Enums } from "@/types/database"
 
@@ -86,6 +87,8 @@ export function QuotationForm(props: QuotationFormProps) {
 
   const form = useForm<QuotationInput>({
     resolver: zodResolver(quotationSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: props.defaultValues,
   })
   const { control, setValue, getValues } = form
@@ -195,7 +198,7 @@ export function QuotationForm(props: QuotationFormProps) {
         router.push(quotationRoute(result.data.id))
         router.refresh()
       })
-    })
+    }, scrollToFirstInvalid)
   }
 
   const customerOptions = options.customers

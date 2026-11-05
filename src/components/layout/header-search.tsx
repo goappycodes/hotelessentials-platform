@@ -196,9 +196,14 @@ function ModuleSearch({
           type="text"
           value={value}
           onChange={(event) => {
-            setValue(event.target.value)
+            const next = event.target.value
+            setValue(next)
             setIsOpen(true)
             setActiveIndex(-1)
+            // Emptying the box brings the whole list back, like the clear button.
+            if (!next.trim() && isListPage && q) {
+              update({ [LIST_SEARCH_PARAMS.search]: null, [LIST_SEARCH_PARAMS.page]: null })
+            }
           }}
           onFocus={() => setIsOpen(true)}
           onBlur={close}

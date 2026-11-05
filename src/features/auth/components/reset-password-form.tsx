@@ -12,6 +12,7 @@ import { FormInputField } from "@/components/shared/form-input-field"
 import { SubmitButton } from "@/components/shared/submit-button"
 import { FieldGroup } from "@/components/ui/field"
 import { ROUTES } from "@/constants/routes"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import {
   resetPasswordSchema,
   type ResetPasswordInput,
@@ -24,6 +25,8 @@ export function ResetPasswordForm() {
 
   const form = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: { password: "", confirmPassword: "" },
   })
 
@@ -41,7 +44,7 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+    <form onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)} noValidate>
       <FieldGroup>
         <FormError message={error} />
         <FormInputField

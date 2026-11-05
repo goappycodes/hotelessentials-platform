@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { ROUTES } from "@/constants/routes"
 import { TAX_SCOPE_DESCRIPTIONS, TAX_SCOPES } from "@/constants/taxes"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import { taxRateSchema, type TaxRateInput } from "@/lib/validations/tax"
 
 const NEW_TAX: TaxRateInput = {
@@ -49,6 +50,8 @@ export function TaxForm(props: TaxFormProps) {
 
   const form = useForm<TaxRateInput>({
     resolver: zodResolver(taxRateSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: mode === "edit" ? props.defaultValues : NEW_TAX,
   })
   const [taxScope, cgstRate, sgstRate] = useWatch({
@@ -71,7 +74,7 @@ export function TaxForm(props: TaxFormProps) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
+    <form onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)} noValidate className="flex flex-col gap-6">
       <FormError message={error} />
       <fieldset disabled={isPending} className="contents">
         <Card>

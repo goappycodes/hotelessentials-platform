@@ -22,7 +22,7 @@ export type ListQuery = {
 
 const MAX_SEARCH_LENGTH = 100
 
-function readParam(params: ListSearchParams, key: string) {
+export function readParam(params: ListSearchParams, key: string) {
   if (params instanceof URLSearchParams) return params.get(key) ?? undefined
   const value = params[key]
   return Array.isArray(value) ? value[0] : value
@@ -98,7 +98,10 @@ export function applyListFilters<Q extends FilterBuilder<Q>>(
   }
   if (query.search) {
     const { term, columns } = query.search
-    result = result.or(columns.map((column) => `${column}.ilike.*${term}*`).join(","))
+    // Anything may sit between words, so dropped characters and extra spaces in the stored
+    // text still match: "PAN GREY" finds "PAN (GREY)".
+    const pattern = term.replace(/ /g, "*")
+    result = result.or(columns.map((column) => `${column}.ilike.*${pattern}*`).join(","))
   }
   return result
 }

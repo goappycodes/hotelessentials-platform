@@ -52,6 +52,8 @@ export type ItemRow = {
 
 type ItemsWorkspaceProps = {
   rows: ItemRow[]
+  // The opened item when it isn't among rows (opened from the search, say).
+  openRow: ItemRow | null
   hasNextPage: boolean
   isFiltered: boolean
   canCreate: boolean
@@ -66,6 +68,7 @@ type ItemsWorkspaceProps = {
 // only the URL's ?item= changes (history.pushState), so Back and shared links still work.
 export function ItemsWorkspace({
   rows,
+  openRow,
   hasNextPage,
   isFiltered,
   canCreate,
@@ -111,6 +114,9 @@ export function ItemsWorkspace({
   const refreshList = useCallback(() => router.refresh(), [router])
 
   if (openId) {
+    // An item from another page goes first in the list, so what's open always shows.
+    const sideRows = openRow?.id === openId ? [openRow, ...rows] : rows
+
     return (
       <div className="flex h-[calc(100svh-3.5rem)] min-h-0">
         <aside className="hidden w-80 shrink-0 flex-col border-r bg-card lg:flex">
@@ -133,12 +139,20 @@ export function ItemsWorkspace({
               <ItemsActionsMenu entityLabel={navItem.title} canImport={canCreate} />
             </Suspense>
           </div>
-          <ItemsSideList rows={rows} openId={openId} hrefFor={hrefFor} onOpen={open} />
+          <ItemsSideList rows={sideRows} openId={openId} hrefFor={hrefFor} onOpen={open} />
+          <div className="shrink-0 border-t bg-card p-2">
+            <ListPagination
+              config={ITEMS_LIST}
+              itemCount={rows.length}
+              hasNextPage={hasNextPage}
+              countAction={countItems}
+            />
+          </div>
         </aside>
         <section className="min-w-0 flex-1 overflow-y-auto">
           <ItemPanel
             itemId={openId}
-            previewName={rows.find((item) => item.id === openId)?.name}
+            previewName={sideRows.find((item) => item.id === openId)?.name}
             onClose={close}
             onListChange={refreshList}
           />

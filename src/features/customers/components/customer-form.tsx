@@ -71,6 +71,7 @@ import { COUNTRIES } from "@/constants/countries"
 import { ROUTES, customerRoute } from "@/constants/routes"
 import { EMPTY_CONTACT } from "@/features/customers/customer-input"
 import type { CustomerFormOptions } from "@/features/customers/queries"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import {
   customerSchema,
   GSTIN_PATTERN,
@@ -115,6 +116,8 @@ export function CustomerForm(props: CustomerFormProps) {
 
   const form = useForm<CustomerInput>({
     resolver: zodResolver(customerSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: props.defaultValues,
   })
 
@@ -133,7 +136,10 @@ export function CustomerForm(props: CustomerFormProps) {
   }
 
   // Errors in a tab that isn't showing: open the first such tab so they can be seen.
-  function onInvalid(errors: Partial<Record<keyof CustomerInput, unknown>>) {
+  function onInvalid(
+    errors: Partial<Record<keyof CustomerInput, unknown>>,
+    event?: React.BaseSyntheticEvent
+  ) {
     const otherFields: (keyof CustomerInput)[] = [
       "gstTreatment",
       "gstin",
@@ -146,6 +152,7 @@ export function CustomerForm(props: CustomerFormProps) {
     else if (errors.billing || errors.shipping) setTab("address")
     else if (errors.contacts) setTab("contacts")
     else if (errors.remarks) setTab("remarks")
+    scrollToFirstInvalid(errors, event)
   }
 
   return (

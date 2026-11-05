@@ -11,6 +11,7 @@ import { FormInputField } from "@/components/shared/form-input-field"
 import { SubmitButton } from "@/components/shared/submit-button"
 import { FieldGroup } from "@/components/ui/field"
 import { ROUTES } from "@/constants/routes"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import { loginSchema, type LoginInput } from "@/lib/validations/auth"
 
 export function LoginForm() {
@@ -19,6 +20,8 @@ export function LoginForm() {
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: { email: "", password: "" },
   })
 
@@ -31,7 +34,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+    <form onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)} noValidate>
       <FieldGroup>
         <FormError message={error} />
         <FormInputField

@@ -56,6 +56,7 @@ import {
 import { invalidateItemDetail } from "@/features/items/item-detail-cache"
 import type { ItemImageView } from "@/features/items/queries"
 import { formatTaxName, type TaxRate } from "@/features/taxes/tax-rates"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import { itemSchema, type ItemInput } from "@/lib/validations/item"
 
 export const NEW_ITEM: ItemInput = {
@@ -116,6 +117,8 @@ export function ItemForm(props: ItemFormProps) {
 
   const form = useForm<ItemInput>({
     resolver: zodResolver(itemSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues:
       mode === "edit"
         ? props.defaultValues
@@ -196,7 +199,11 @@ export function ItemForm(props: ItemFormProps) {
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)}
+        noValidate
+        className="flex flex-col gap-6"
+      >
         <FormError message={error} />
         {readOnly && (
           <Alert>

@@ -1,8 +1,10 @@
 "use client"
 
 import { useVirtualizer } from "@tanstack/react-virtual"
+import { useSearchParams } from "next/navigation"
 import { useEffect, useRef } from "react"
 
+import { LIST_SEARCH_PARAMS } from "@/constants/list"
 import type { ItemRow } from "@/features/items/components/items-workspace"
 import { prefetchItemDetail } from "@/features/items/item-detail-cache"
 import { formatCurrency } from "@/lib/format"
@@ -35,13 +37,22 @@ export function ItemsSideList({ rows, openId, hrefFor, onOpen }: ItemsSideListPr
     getItemKey: (index) => rows[index]?.id ?? index,
   })
 
-  // Opening an item far down the table: bring it into view in this list. Only when the
-  // list first appears, so clicking within the list doesn't make it jump.
+  // Opening an item far down the table, or from the search: bring it into view in this
+  // list. "auto" leaves a row that's already showing where it is, so clicking within the
+  // list doesn't make it jump. rows is watched for an item the search brought in.
   useEffect(() => {
     const index = rows.findIndex((item) => item.id === openId)
-    if (index > 0) virtualizer.scrollToIndex(index, { align: "center" })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (index >= 0) virtualizer.scrollToIndex(index, { align: "auto" })
+  }, [openId, rows, virtualizer])
+
+  // Going to another page starts this list from its first row.
+  const page = useSearchParams().get(LIST_SEARCH_PARAMS.page)
+  const shownPage = useRef(page)
+  useEffect(() => {
+    if (shownPage.current === page) return
+    shownPage.current = page
+    virtualizer.scrollToOffset(0)
+  }, [page, virtualizer])
 
   return (
     <nav ref={scrollRef} aria-label="Items" className="min-h-0 flex-1 overflow-y-auto">

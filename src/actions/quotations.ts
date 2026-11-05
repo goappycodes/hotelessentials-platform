@@ -355,7 +355,8 @@ export async function searchQuoteItems(
   }
 
   const supabase = await createClient()
-  const words = parsed.data.term.replace(/[%_,()]/g, " ").trim()
+  // Anything may sit between words, so "PAN GREY" finds "PAN (GREY)".
+  const words = parsed.data.term.replace(/[%_,()]/g, " ").trim().replace(/\s+/g, "%")
   let query = supabase
     .from("item_list")
     .select(QUOTE_ITEM_COLUMNS)

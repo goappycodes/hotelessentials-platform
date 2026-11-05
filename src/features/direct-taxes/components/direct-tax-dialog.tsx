@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { FieldGroup } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import { directTaxSchema, type DirectTaxInput } from "@/lib/validations/direct-tax"
 import type { Enums } from "@/types/database"
 
@@ -39,6 +40,8 @@ export function DirectTaxDialog({
   const [isPending, startTransition] = useTransition()
   const form = useForm<DirectTaxInput>({
     resolver: zodResolver(directTaxSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: { kind, name: "", rate: "" },
   })
 
@@ -60,7 +63,7 @@ export function DirectTaxDialog({
       onSaved(result.data)
       onOpenChange(false)
     })
-  })
+  }, scrollToFirstInvalid)
 
   return (
     <Dialog open={open} onOpenChange={(next) => !isPending && onOpenChange(next)}>

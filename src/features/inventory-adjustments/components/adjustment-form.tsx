@@ -36,6 +36,7 @@ import { ROUTES, inventoryAdjustmentRoute } from "@/constants/routes"
 import { AdjustmentItemsTable } from "@/features/inventory-adjustments/components/adjustment-items-table"
 import type { AdjustmentItemOption } from "@/features/inventory-adjustments/queries"
 import { invalidateItemDetail } from "@/features/items/item-detail-cache"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import {
   inventoryAdjustmentSchema,
   type InventoryAdjustmentInput,
@@ -87,6 +88,8 @@ export function AdjustmentForm(props: AdjustmentFormProps) {
 
   const form = useForm<InventoryAdjustmentInput>({
     resolver: zodResolver(inventoryAdjustmentSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     // A new adjustment's date is today in the browser, so it is set on the client.
     defaultValues: mode === "edit" ? props.defaultValues : newAdjustment(props.itemId),
   })
@@ -137,7 +140,7 @@ export function AdjustmentForm(props: AdjustmentFormProps) {
         router.push(inventoryAdjustmentRoute(result.data.id))
         router.refresh()
       })
-    })
+    }, scrollToFirstInvalid)
   }
 
   const busy = readOnly || isPending

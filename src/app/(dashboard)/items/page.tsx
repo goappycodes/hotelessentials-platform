@@ -62,11 +62,12 @@ async function Items({ searchParams }: Pick<PageProps<"/items">, "searchParams">
     )
   }
 
-  const { rows, hasNextPage, isFiltered } = await getItemRows(params)
+  const { rows, openRow, hasNextPage, isFiltered } = await getItemRows(params)
 
   return (
     <ItemsWorkspace
       rows={rows}
+      openRow={openRow}
       hasNextPage={hasNextPage}
       isFiltered={isFiltered}
       canCreate={hasAccess(session, navItem.access, "create")}

@@ -11,6 +11,7 @@ import { FormInputField } from "@/components/shared/form-input-field"
 import { SubmitButton } from "@/components/shared/submit-button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { FieldGroup } from "@/components/ui/field"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import {
   forgotPasswordSchema,
   type ForgotPasswordInput,
@@ -23,6 +24,8 @@ export function ForgotPasswordForm() {
 
   const form = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues: { email: "" },
   })
 
@@ -49,7 +52,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+    <form onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)} noValidate>
       <FieldGroup>
         <FormError message={error} />
         <FormInputField

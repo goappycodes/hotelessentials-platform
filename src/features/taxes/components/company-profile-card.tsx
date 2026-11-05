@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FieldGroup } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { CompanyImageField } from "@/features/taxes/components/company-image-field"
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import {
   companyProfileSchema,
   type CompanyProfileInput,
@@ -36,6 +37,8 @@ export function CompanyProfileCard({
   const [isPending, startTransition] = useTransition()
   const form = useForm<CompanyProfileInput>({
     resolver: zodResolver(companyProfileSchema),
+    // scrollToFirstInvalid does this, dropdowns included.
+    shouldFocusError: false,
     defaultValues,
   })
   const disabled = !canEdit || isPending
@@ -51,7 +54,7 @@ export function CompanyProfileCard({
       form.reset(values)
       router.refresh()
     })
-  })
+  }, scrollToFirstInvalid)
 
   return (
     <Card>
