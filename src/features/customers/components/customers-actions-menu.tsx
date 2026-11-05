@@ -19,7 +19,7 @@ const CUSTOMER_IMPORTER: CsvImporter<CustomerImportRow> = {
   note: "Contact persons aren't part of this file; add them on each customer.",
 }
 
-// The Customers "⋯" menu: Import opens the file picker straight away; Export downloads a CSV.
+// The Customers "⋯" menu: Import and Export each open a dialog (CSV or Excel).
 export function CustomersActionsMenu({
   entityLabel,
   canImport,

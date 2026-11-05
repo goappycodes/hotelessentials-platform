@@ -1,9 +1,9 @@
 import { QUOTATIONS_LIST } from "@/features/quotations/list-config"
 import { QUOTATION_CSV_COLUMNS, toQuotationCsvRows } from "@/features/quotations/quotation-csv"
-import { toCsv } from "@/lib/csv"
 import { applyListFilters, parseListQuery } from "@/lib/list-query"
 import { hasAccess } from "@/lib/permissions"
 import { fetchSession } from "@/lib/session"
+import { spreadsheetResponse } from "@/lib/spreadsheet-response"
 import { createClient } from "@/lib/supabase/server"
 
 // Quotations are read a page at a time, each with its lines.
@@ -42,12 +42,5 @@ export async function GET(request: Request) {
     if (data.length < PAGE_SIZE) break
   }
 
-  const date = new Date().toISOString().slice(0, 10)
-  return new Response(toCsv(rows), {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="Quotations-${date}.csv"`,
-      "Cache-Control": "no-store",
-    },
-  })
+  return spreadsheetResponse(rows, "Quotations", params.format)
 }

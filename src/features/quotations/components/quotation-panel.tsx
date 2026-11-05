@@ -288,7 +288,7 @@ function QuotationView({
           </div>
         )}
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
-          <QuotationDocument data={data} isExpired={isExpired} className="min-w-[44rem]" />
+          <QuotationDocument data={data} isExpired={isExpired} className="min-w-[595.28pt]" />
         </div>
       </div>
 

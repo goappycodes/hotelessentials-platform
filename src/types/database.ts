@@ -121,6 +121,9 @@ export type Database = {
           gstin: string | null
           bank_details: string | null
           // Files in the company-assets bucket.
+          // A second address block in the quotation header.
+          address_2: string | null
+          pan: string | null
           logo_path: string | null
           signature_path: string | null
           updated_at: string

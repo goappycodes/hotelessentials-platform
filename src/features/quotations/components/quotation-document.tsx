@@ -1,36 +1,24 @@
-// The quotation as the customer sees it, laid out like the business's Zoho quote
-// template: logo and company details, quote details and place of supply, Bill To, the
-// items with their GST split, totals in figures and words, bank details, terms and the
-// signature stamp. Shown beside the list and on the print page (print or save as PDF).
-// No hooks, so it renders on the server or the client.
+// The quotation as the customer sees it, measured from the business's own PDF: logo and
+// company details, To, the items with a picture, code and GST %, totals in figures and
+// words, then bank details and terms. Sizes are in points, so print matches the PDF (A4,
+// 13pt / 26pt margins). Shown beside the list and on the print page (print or save as
+// PDF). No hooks, so it renders on the server or the client.
 /* eslint-disable @next/next/no-img-element -- signed storage URLs, printed as they are */
-import { INDIAN_STATES } from "@/constants/customers";
-import type { QuotationDocumentData } from "@/features/quotations/queries";
-import { amountInWords } from "@/lib/amount-in-words";
-import { formatCurrency } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import type { QuotationDocumentData } from "@/features/quotations/queries"
+import { amountInWords } from "@/lib/amount-in-words"
+import { cn } from "@/lib/utils"
 
 const numberFormat = new Intl.NumberFormat("en-IN", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
-});
-const quantityFormat = new Intl.NumberFormat("en-IN", {
-  maximumFractionDigits: 4,
-});
-const amount = (value: number) => numberFormat.format(value);
-const percent = (value: number) => `${Number(value.toFixed(2))}`;
+})
+const money = (value: number) => `₹ ${numberFormat.format(value)}`
 
-// Like Zoho's quote: 04/11/2026.
+// 04-11-2026
 function formatQuoteDate(value: string) {
-  const [year, month, day] = value.split("-");
-  return `${day}/${month}/${year}`;
+  const [year, month, day] = value.split("-")
+  return `${day}-${month}-${year}`
 }
-
-// The template's colours.
-const LABEL = "text-[#3c4f8c]";
-const ACCENT = "text-[#a5372b]";
-const ITEM_ACCENT = "text-[#c0561d]";
-const CUSTOMER = "text-[#2257c5]";
 
 const RIBBON_CLASS: Record<string, string> = {
   Draft: "bg-[#7d8b8c]",
@@ -38,38 +26,49 @@ const RIBBON_CLASS: Record<string, string> = {
   Accepted: "bg-[#3aa76d]",
   Declined: "bg-[#d0453c]",
   Expired: "bg-[#d48a2c]",
-};
-
-type Line = QuotationDocumentData["lines"][number];
-type LineTax = { cgst: number; sgst: number; igst: number };
-
-// How a line's GST splits. From the tax rate when it still exists, else from the name
-// and rate saved on the line (IGST… is inter-state; anything else splits in half).
-function lineTax(line: Line): LineTax {
-  if (line.tax) {
-    return line.tax.tax_scope === "Intra-state"
-      ? {
-          cgst: line.tax.cgst_rate ?? 0,
-          sgst: line.tax.sgst_rate ?? 0,
-          igst: 0,
-        }
-      : { cgst: 0, sgst: 0, igst: line.tax.igst_rate ?? 0 };
-  }
-  const rate = line.tax_rate ?? 0;
-  if (!rate) return { cgst: 0, sgst: 0, igst: 0 };
-  return line.tax_name?.toUpperCase().startsWith("IGST")
-    ? { cgst: 0, sgst: 0, igst: rate }
-    : { cgst: rate / 2, sgst: rate / 2, igst: 0 };
 }
 
-function placeOfSupplyLabel(code: string | null) {
-  if (!code) return null;
-  const state = INDIAN_STATES.find((entry) => entry.code === code);
-  return state ? `${state.name} (${code})` : code;
-}
+// Column widths in points, in order; they add up to the page's 543.28pt.
+const COLUMNS = [
+  { label: "S.No.", width: "32.5pt" },
+  { label: "Image", width: "76pt" },
+  { label: "Code", width: "79.8pt" },
+  { label: "Name", width: "158.8pt" },
+  { label: "Qty", width: "43.4pt" },
+  { label: "Selling Rate", width: "59.7pt" },
+  { label: "Taxable Amount", width: "59.7pt" },
+  { label: "GST", width: "32.5pt" },
+]
+
+const HEAD_CELL =
+  "h-[22.8pt] border border-black bg-[#1877f2] p-0 text-center align-middle text-[7pt] font-normal text-white"
+const CELL = "h-[67pt] border border-black p-0 text-center align-middle"
+const SUMMARY_LABEL = "h-[20.8pt] w-[178.9pt] border border-black px-[6pt] text-right font-bold"
+const SUMMARY_VALUE = "h-[20.8pt] border border-black px-[6pt] text-right"
 
 const lines = (text: string | null | undefined) =>
-  (text ?? "").split("\n").filter((line) => line.trim());
+  (text ?? "").split("\n").filter((line) => line.trim())
+
+// Numbered terms, one to an entry: a line that doesn't start a number carries on the one
+// before it (Zoho's text breaks mid-sentence), so each entry flows to the column's width.
+function termEntries(text: string | null | undefined) {
+  const entries: string[] = []
+  const all = lines(text)
+  const isNumbered = all.some((line) => /^\d+[.)]/.test(line.trim()))
+  for (const line of all) {
+    const startsEntry = !isNumbered || /^\d+[.)]/.test(line.trim())
+    if (startsEntry || entries.length === 0) entries.push(line.trim())
+    else entries[entries.length - 1] += ` ${line.trim()}`
+  }
+  return entries
+}
+
+// A name starting with its own code doesn't repeat it: "[1P00415] Soda Cup" → "Soda Cup".
+function nameWithoutCode(name: string, sku: string | null | undefined) {
+  if (!sku) return name
+  const prefix = `[${sku}]`
+  return name.startsWith(prefix) ? name.slice(prefix.length).trim() : name
+}
 
 export function QuotationDocument({
   data,
@@ -77,463 +76,224 @@ export function QuotationDocument({
   showStatus = true,
   className,
 }: {
-  data: QuotationDocumentData;
-  isExpired?: boolean;
+  data: QuotationDocumentData
+  isExpired?: boolean
   // The status ribbon in the corner; off for the copy that goes to the customer.
-  showStatus?: boolean;
-  className?: string;
+  showStatus?: boolean
+  className?: string
 }) {
-  const { quote, customer, company } = data;
+  const { quote, customer, company } = data
   const status =
     isExpired && quote.status !== "Accepted" && quote.status !== "Declined"
       ? "Expired"
-      : quote.status;
+      : quote.status
 
-  // A whole-quote discount before tax lowers every line's taxable value by the same share.
-  const transactionDiscount =
-    quote.discount_level === "Transaction" ? quote.discount_total : 0;
-  const taxableShare =
-    transactionDiscount > 0 &&
-    quote.is_discount_before_tax &&
-    quote.sub_total > 0
-      ? (quote.sub_total - transactionDiscount) / quote.sub_total
-      : 1;
+  const transactionDiscount = quote.discount_level === "Transaction" ? quote.discount_total : 0
 
-  const rows = data.lines.map((line) => {
-    const tax = lineTax(line);
-    const taxable = line.amount * taxableShare;
-    return {
-      line,
-      tax,
-      cgstAmount: (taxable * tax.cgst) / 100,
-      sgstAmount: (taxable * tax.sgst) / 100,
-      igstAmount: (taxable * tax.igst) / 100,
-    };
-  });
-  // Lines with a discount (from a price list) get a Discount column.
-  const showDiscount = rows.some((row) => row.line.discount_value > 0);
-  const showIntra = rows.some((row) => row.tax.cgst > 0 || row.tax.sgst > 0);
-  const showInter = rows.some((row) => row.tax.igst > 0);
-  const taxGroups = [
-    ...(showIntra ? ["CGST", "SGST"] : []),
-    ...(showInter ? ["IGST"] : []),
-  ];
-
-  // Tax totals per component and rate, e.g. "IGST18 (18%)".
-  const taxSummary = new Map<string, number>();
-  const addTax = (name: string, rate: number, value: number) => {
-    const label = `${name}${percent(rate)} (${percent(rate)}%)`;
-    taxSummary.set(label, (taxSummary.get(label) ?? 0) + value);
-  };
-  rows.forEach((row) => {
-    if (row.tax.cgst) addTax("CGST", row.tax.cgst, row.cgstAmount);
-    if (row.tax.sgst) addTax("SGST", row.tax.sgst, row.sgstAmount);
-    if (row.tax.igst) addTax("IGST", row.tax.igst, row.igstAmount);
-  });
+  const firstAddress = [
+    ...lines(company?.address),
+    company?.gstin && `GST NO : ${company.gstin}`,
+    company?.pan && `PAN No : ${company.pan}`,
+    company?.email && `Email : ${company.email}`,
+    company?.phone && `Contact No. : ${company.phone}`,
+  ].filter((line): line is string => Boolean(line))
 
   const billingLines = customer
     ? [
         customer.billing_attention,
         customer.billing_street1,
         customer.billing_street2,
-        customer.billing_city,
-        [customer.billing_pin_code, customer.billing_state]
-          .filter(Boolean)
-          .join(" "),
-        customer.billing_country && customer.billing_country !== "India"
-          ? customer.billing_country
-          : null,
+        [customer.billing_city, customer.billing_pin_code].filter(Boolean).join(" "),
+        customer.billing_state,
       ].filter((line): line is string => Boolean(line?.trim()))
-    : [];
-
-  const details: [string, string | null][] = [
-    ["Quotation No", quote.quote_number],
-    ["Quote Date", formatQuoteDate(quote.quote_date)],
-    [
-      "Expiry Date",
-      quote.expiry_date ? formatQuoteDate(quote.expiry_date) : null,
-    ],
-    ["Reference#", quote.reference_number],
-  ];
-
-  const cell = "border-[#9a9a9a] px-1.5 py-1.5 align-top";
-  const head = "border-[#9a9a9a] bg-[#f1f1f1] px-1.5 py-1 font-bold";
+    : []
 
   return (
     <article
       aria-label={`Quotation ${quote.quote_number}`}
       className={cn(
-        "relative mx-auto w-full max-w-[210mm] overflow-hidden bg-white px-[9mm] py-[11mm] font-serif text-[10.5px] leading-[1.45] text-[#222] [print-color-adjust:exact]",
-        className,
+        "relative mx-auto w-[595.28pt] max-w-full overflow-hidden bg-white px-[26pt] py-[13pt] font-(family-name:--font-document) text-[7.5pt] leading-[11.25pt] text-[#151826] [print-color-adjust:exact]",
+        className
       )}
     >
       {showStatus && (
         <div
           aria-hidden="true"
           className={cn(
-            "absolute top-[18px] -left-[42px] w-40 -rotate-45 py-1.5 text-center font-sans text-xs text-white",
-            RIBBON_CLASS[status] ?? RIBBON_CLASS.Draft,
+            "absolute top-[14px] -left-[46px] w-40 -rotate-45 py-1 text-center font-sans text-xs text-white print:hidden",
+            RIBBON_CLASS[status] ?? RIBBON_CLASS.Draft
           )}
         >
           {status}
         </div>
       )}
 
-      <div className="border border-[#6b6b6b]">
-        {/* The business */}
-        <header className="flex gap-4 border-b border-[#6b6b6b] p-2.5">
-          {data.logoUrl && (
-            <img
-              src={data.logoUrl}
-              alt={company?.company_name ?? "Logo"}
-              className="h-[88px] w-[88px] shrink-0 object-contain"
-            />
-          )}
-          <div className="min-w-0 pt-0.5">
-            <p className="text-[15px] leading-tight font-bold uppercase">
-              {company?.company_name || "Hotel Essentials"}
-            </p>
-            {lines(company?.address).map((line, index) => (
-              <p key={index} className={cn("text-[9.5px]", ACCENT)}>
-                {line}
-              </p>
+      <header className="relative h-[124pt] border-b-[1.5pt] border-[#9ca3af]">
+        <h1 className="mb-[12.25pt] text-[19pt] leading-[22pt] font-bold text-[#40535c] uppercase">
+          {company?.company_name || "Your company"}
+        </h1>
+        <div className="flex">
+          <div className="w-[219.9pt] shrink-0">
+            {firstAddress.map((line, index) => (
+              <p key={index}>{line}</p>
             ))}
-            {company?.phone && (
-              <p className={cn("text-[9.5px]", ACCENT)}>{company.phone}</p>
-            )}
-            {company?.email && (
-              <p className="text-[9.5px] text-[#2257c5]">{company.email}</p>
-            )}
-            {company?.gstin && (
-              <p className="text-[9.5px]">GSTIN: {company.gstin}</p>
-            )}
           </div>
-        </header>
-
-        {/* Quote details and place of supply */}
-        <div className="grid grid-cols-2 border-b border-[#6b6b6b]">
-          <dl className="grid grid-cols-[6.5rem_1fr] content-start gap-y-0.5 border-r border-[#6b6b6b] px-1.5 py-1.5">
-            {details
-              .filter(([, value]) => value)
-              .map(([label, value]) => (
-                <div key={label} className="contents">
-                  <dt className={LABEL}>{label}</dt>
-                  <dd className="font-bold">: {value}</dd>
-                </div>
-              ))}
-          </dl>
-          <dl className="grid grid-cols-[6.5rem_1fr] content-start px-1.5 py-1.5">
-            <dt className={LABEL}>Place Of Supply</dt>
-            <dd className="font-bold">
-              : {placeOfSupplyLabel(quote.place_of_supply) ?? "—"}
-            </dd>
-          </dl>
+          <div>
+            {lines(company?.address_2).map((line, index) => (
+              <p key={index}>{line}</p>
+            ))}
+          </div>
         </div>
+        {data.logoUrl && (
+          <img
+            src={data.logoUrl}
+            alt={company?.company_name ?? "Logo"}
+            className="absolute top-0 right-[3.8pt] h-[57pt] w-[134.4pt] object-contain object-right"
+          />
+        )}
+        <dl className="absolute top-[73.4pt] right-0 text-right leading-[11.7pt]">
+          <div>
+            <dt className="inline">Date: </dt>
+            <dd className="inline">{formatQuoteDate(quote.quote_date)}</dd>
+          </div>
+          <div>
+            <dt className="inline">Quotation No: </dt>
+            <dd className="inline">{quote.quote_number}</dd>
+          </div>
+        </dl>
+      </header>
 
-        {/* The customer */}
-        <div className="border-b border-[#6b6b6b] bg-[#f1f1f1] px-1.5 py-0.5 font-bold">
-          Bill To
-        </div>
-        <div className="border-b border-[#6b6b6b] px-1.5 py-1.5">
-          <p className={cn("font-bold", CUSTOMER)}>
-            {customer?.display_name ?? quote.customer_name}
-          </p>
-          {billingLines.map((line, index) => (
-            <p key={index} className="text-[9.5px] uppercase">
-              {line}
+      <section className="pt-[12.3pt] text-[8.5pt] leading-[9.5pt]">
+        <p className="mb-[2.1pt] font-bold">To,</p>
+        <p className="text-[11pt] leading-[13pt] font-bold">
+          {customer?.display_name ?? quote.customer_name}
+        </p>
+        {billingLines.map((line, index) => (
+          <p key={index}>{line}</p>
+        ))}
+        {customer?.gstin && <p>GST No : {customer.gstin}</p>}
+      </section>
+
+      <h2 className="mt-[14.3pt] mb-[3.3pt] text-center text-[14pt] leading-[16pt] font-bold">
+        Quotation
+      </h2>
+
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          {COLUMNS.map((column) => (
+            <col key={column.label} style={{ width: column.width }} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr className="break-inside-avoid">
+            {COLUMNS.map((column) => (
+              <th key={column.label} className={HEAD_CELL}>
+                {column.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.lines.map((line, index) => {
+            const sku = line.item?.sku
+            return (
+              <tr key={line.id} className="break-inside-avoid">
+                <td className={CELL}>{index + 1}</td>
+                <td className={CELL}>
+                  {line.imageUrl ? (
+                    <img
+                      src={line.imageUrl}
+                      alt=""
+                      className="mx-auto max-h-[56pt] max-w-[56pt] object-contain"
+                    />
+                  ) : (
+                    <div className="mx-auto flex size-[56pt] items-center justify-center bg-[#f3f4f6] text-[7pt] text-[#9ca3af]">
+                      No image
+                    </div>
+                  )}
+                </td>
+                <td className={cn(CELL, "px-[2pt] break-words")}>{sku}</td>
+                <td className={cn(CELL, "px-[4pt] text-left leading-[9.75pt]")}>
+                  {nameWithoutCode(line.name, sku)}
+                  {line.description && line.description !== line.name && (
+                    <span className="block whitespace-pre-line text-[#555]">{line.description}</span>
+                  )}
+                </td>
+                <td className={CELL}>{numberFormat.format(line.quantity)}</td>
+                {/* What each one sells for after any discount, so Qty × Rate = Taxable. */}
+                <td className={CELL}>{money(line.amount / line.quantity)}</td>
+                <td className={CELL}>{money(line.amount)}</td>
+                <td className={CELL}>{(line.tax_rate ?? 0).toFixed(1)}%</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+
+      <table className="mt-[14pt] w-full border-collapse break-inside-avoid">
+        <tbody>
+          <tr>
+            <th className={SUMMARY_LABEL}>Taxable amount</th>
+            <td className={SUMMARY_VALUE}>{money(quote.sub_total)}</td>
+          </tr>
+          {transactionDiscount > 0 && (
+            <tr>
+              <th className={SUMMARY_LABEL}>Discount</th>
+              <td className={SUMMARY_VALUE}>- {money(transactionDiscount)}</td>
+            </tr>
+          )}
+          <tr>
+            <th className={SUMMARY_LABEL}>GST</th>
+            <td className={SUMMARY_VALUE}>{money(quote.tax_total)}</td>
+          </tr>
+          {quote.adjustment !== 0 && (
+            <tr>
+              <th className={SUMMARY_LABEL}>{quote.adjustment_description || "Adjustment"}</th>
+              <td className={SUMMARY_VALUE}>{money(quote.adjustment)}</td>
+            </tr>
+          )}
+          <tr>
+            <th className={cn(SUMMARY_LABEL, "bg-[#f3f4f6]")}>Total</th>
+            <td className={cn(SUMMARY_VALUE, "font-bold")}>{money(quote.total)}</td>
+          </tr>
+          <tr>
+            <th className={cn(SUMMARY_LABEL, "bg-[#f9fafb] text-left")}>
+              Total Quotation Amount in Words
+            </th>
+            <td className={cn(SUMMARY_VALUE, "text-left font-bold")}>
+              {amountInWords(quote.total)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div className="grid grid-cols-[283.6pt_266.5pt] pt-[37pt] text-[8.5pt] break-inside-avoid">
+        <section className="leading-[12.75pt]">
+          {lines(company?.bank_details).length > 0 && (
+            <h3 className="mb-[3.5pt] text-[11pt] leading-[13pt] font-bold">BANK DETAILS :</h3>
+          )}
+          {lines(company?.bank_details).map((line, index) => (
+            <p key={index}>{line}</p>
+          ))}
+        </section>
+        <section className="leading-[9.75pt]">
+          {quote.terms && (
+            <h3 className="mb-[5pt] text-[11pt] leading-[13pt] font-bold">Terms &amp; Conditions:</h3>
+          )}
+          {termEntries(quote.terms).map((entry, index) => (
+            <p key={index} className="mb-[4pt]">
+              {entry}
             </p>
           ))}
-          {customer?.gstin && (
-            <p className="text-[9.5px]">GSTIN: {customer.gstin}</p>
-          )}
-        </div>
-
-        {quote.subject && (
-          <div className="border-b border-[#6b6b6b] px-1.5 py-1.5">
-            <p className={LABEL}>Subject :</p>
-            <p>{quote.subject}</p>
-          </div>
-        )}
-
-        {/* The items */}
-        <table className="w-full border-collapse text-[9.5px]">
-          <thead>
-            <tr>
-              <th
-                rowSpan={2}
-                className={cn(head, "w-6 border-r border-b text-center")}
-              >
-                #
-              </th>
-              <th
-                rowSpan={2}
-                className={cn(head, "border-r border-b text-left")}
-              >
-                Item &amp; Description
-              </th>
-              <th
-                rowSpan={2}
-                className={cn(head, "w-12 border-r border-b text-right")}
-              >
-                Qty
-              </th>
-              <th
-                rowSpan={2}
-                className={cn(head, "w-16 border-r border-b text-right")}
-              >
-                Rate
-              </th>
-              {showDiscount && (
-                <th
-                  rowSpan={2}
-                  className={cn(head, "w-14 border-r border-b text-right")}
-                >
-                  Discount
-                </th>
-              )}
-              {taxGroups.map((name) => (
-                <th
-                  key={name}
-                  colSpan={2}
-                  className={cn(head, "border-r border-b text-center")}
-                >
-                  {name}
-                </th>
-              ))}
-              <th
-                rowSpan={2}
-                className={cn(head, "w-[4.5rem] border-b text-right")}
-              >
-                Amount
-              </th>
-            </tr>
-            <tr>
-              {taxGroups.map((name) => (
-                <TaxHead key={name} className={head} />
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(
-              ({ line, tax, cgstAmount, sgstAmount, igstAmount }, index) => (
-                <tr key={line.id} className="break-inside-avoid">
-                  <td
-                    className={cn(
-                      cell,
-                      "border-r border-b text-center",
-                      ITEM_ACCENT,
-                    )}
-                  >
-                    {index + 1}
-                  </td>
-                  <td className={cn(cell, "border-r border-b")}>
-                    <div className="flex gap-3">
-                      {line.imageUrl && (
-                        <img
-                          src={line.imageUrl}
-                          alt=""
-                          className="h-11 w-11 shrink-0 object-contain"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p>{line.name}</p>
-                        {line.description && (
-                          <p className="whitespace-pre-line text-[#555]">
-                            {line.description}
-                          </p>
-                        )}
-                        {line.hsn_code && (
-                          <p className="mt-2">HSN: {line.hsn_code}</p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td
-                    className={cn(
-                      cell,
-                      "border-r border-b text-right",
-                      ITEM_ACCENT,
-                    )}
-                  >
-                    {quantityFormat.format(line.quantity)}
-                    {line.unit && (
-                      <span className="block text-[8.5px] text-[#555]">
-                        {line.unit}
-                      </span>
-                    )}
-                  </td>
-                  <td className={cn(cell, "border-r border-b text-right")}>
-                    {amount(line.rate)}
-                  </td>
-                  {showDiscount && (
-                    <td
-                      className={cn(
-                        cell,
-                        "border-r border-b text-right",
-                        ITEM_ACCENT,
-                      )}
-                    >
-                      {line.discount_value > 0
-                        ? line.discount_is_percent
-                          ? `${Number(line.discount_value.toFixed(2))}%`
-                          : amount(line.discount_value)
-                        : ""}
-                    </td>
-                  )}
-                  {showIntra && (
-                    <>
-                      <TaxCells
-                        rate={tax.cgst}
-                        value={cgstAmount}
-                        className={cell}
-                      />
-                      <TaxCells
-                        rate={tax.sgst}
-                        value={sgstAmount}
-                        className={cell}
-                      />
-                    </>
-                  )}
-                  {showInter && (
-                    <TaxCells
-                      rate={tax.igst}
-                      value={igstAmount}
-                      className={cell}
-                    />
-                  )}
-                  <td className={cn(cell, "border-b text-right")}>
-                    {amount(line.amount)}
-                  </td>
-                </tr>
-              ),
-            )}
-          </tbody>
-        </table>
-
-        {/* Words, bank details and terms; totals and signature */}
-        <div className="grid grid-cols-[1fr_15rem] break-inside-avoid">
-          <div className="flex flex-col gap-3 border-r border-[#6b6b6b] px-1.5 py-2">
-            <div>
-              <p className={LABEL}>Total In Words</p>
-              <p className="font-bold italic">{amountInWords(quote.total)}</p>
-            </div>
-            {quote.notes && (
-              <div>
-                <p className={LABEL}>Notes</p>
-                <p className="whitespace-pre-line">{quote.notes}</p>
-              </div>
-            )}
-            {company?.bank_details && (
-              <div>
-                <p className={cn("font-bold", LABEL)}>BANK DETAILS</p>
-                {lines(company.bank_details).map((line, index) => {
-                  // "Bank Name : STATE BANK OF INDIA": the value in the accent colour.
-                  const split = line.indexOf(":");
-                  return split > 0 ? (
-                    <p key={index}>
-                      {line.slice(0, split + 1)}
-                      <span className={ACCENT}>{line.slice(split + 1)}</span>
-                    </p>
-                  ) : (
-                    <p key={index}>{line}</p>
-                  );
-                })}
-              </div>
-            )}
-            {quote.terms && (
-              <div>
-                <p className={ACCENT}>Terms &amp; Conditions</p>
-                <p className="whitespace-pre-line">{quote.terms}</p>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col">
-            <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 border-b border-[#6b6b6b] px-1.5 py-2 text-right">
-              <dt>Sub Total</dt>
-              <dd>{amount(quote.sub_total)}</dd>
-              {transactionDiscount > 0 && (
-                <>
-                  <dt>Discount</dt>
-                  <dd>(−) {amount(transactionDiscount)}</dd>
-                </>
-              )}
-              {[...taxSummary].map(([label, value]) => (
-                <div key={label} className="contents">
-                  <dt>{label}</dt>
-                  <dd>{amount(value)}</dd>
-                </div>
-              ))}
-              {/* TDS / TCS is hidden for now; uncomment to print it again.
-              {quote.direct_tax_amount > 0 && (
-                <>
-                  <dt>
-                    {quote.tax_deduction_type}
-                    {quote.direct_tax_name &&
-                      ` (${quote.direct_tax_name}${quote.direct_tax_rate !== null ? ` ${Number(quote.direct_tax_rate.toFixed(2))}%` : ""})`}
-                  </dt>
-                  <dd>
-                    {quote.tax_deduction_type === "TDS" ? "(−) " : ""}
-                    {amount(quote.direct_tax_amount)}
-                  </dd>
-                </>
-              )}
-              */}
-              {quote.adjustment !== 0 && (
-                <>
-                  <dt>{quote.adjustment_description || "Adjustment"}</dt>
-                  <dd>{amount(quote.adjustment)}</dd>
-                </>
-              )}
-              <dt className="font-bold">Total</dt>
-              <dd className="font-bold">{formatCurrency(quote.total)}</dd>
-            </dl>
-            <div className="flex min-h-36 flex-1 flex-col items-center justify-end gap-1 px-1.5 pt-2 pb-1.5">
-              {data.signatureUrl && (
-                <img
-                  src={data.signatureUrl}
-                  alt="Signature"
-                  className="max-h-28 max-w-full object-contain"
-                />
-              )}
-              <p>Authorized Signature</p>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
+
+      {quote.notes && (
+        <section className="mt-[12pt] text-[8.5pt] leading-[11pt] break-inside-avoid">
+          <h3 className="mb-[2pt] text-[11pt] leading-[13pt] font-bold">Notes:</h3>
+          <p className="whitespace-pre-line">{quote.notes}</p>
+        </section>
+      )}
     </article>
-  );
-}
-
-function TaxHead({ className }: { className: string }) {
-  return (
-    <>
-      <th className={cn(className, "w-7 border-r border-b text-center")}>%</th>
-      <th className={cn(className, "w-12 border-r border-b text-right")}>
-        Amt
-      </th>
-    </>
-  );
-}
-
-function TaxCells({
-  rate,
-  value,
-  className,
-}: {
-  rate: number;
-  value: number;
-  className: string;
-}) {
-  return (
-    <>
-      <td
-        className={cn(className, "border-r border-b text-center", ITEM_ACCENT)}
-      >
-        {rate ? `${percent(rate)} %` : ""}
-      </td>
-      <td className={cn(className, "border-r border-b text-right")}>
-        {rate ? amount(value) : ""}
-      </td>
-    </>
-  );
+  )
 }

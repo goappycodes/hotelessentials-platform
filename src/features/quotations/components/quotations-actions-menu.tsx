@@ -19,7 +19,7 @@ const QUOTATION_IMPORTER: CsvImporter<QuotationImportRow> = {
   note: "Salesperson, price lists and attachments aren't part of this file.",
 }
 
-// The Quotations "⋯" menu: Import opens the file picker straight away; Export downloads a CSV.
+// The Quotations "⋯" menu: Import and Export each open a dialog (CSV or Excel).
 export function QuotationsActionsMenu({
   entityLabel,
   canImport,

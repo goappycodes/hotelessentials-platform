@@ -1,5 +1,5 @@
-// An amount in words the Indian way (lakh, crore), as printed on quotes and invoices:
-// 14407.78 → "Indian Rupee Fourteen Thousand Four Hundred Seven and Seventy-Eight Paise Only".
+// An amount in words the Indian way (lakh, crore), as printed on quotations:
+// 10371.89 → "Ten Thousand, Three Hundred And Seventy-One Rupees and Eighty-Nine Paise".
 
 const ONES = [
   "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
@@ -19,7 +19,7 @@ function belowThousand(value: number) {
   const rest = value % 100
   return [hundreds ? `${ONES[hundreds]} Hundred` : "", rest ? belowHundred(rest) : ""]
     .filter(Boolean)
-    .join(" ")
+    .join(" And ")
 }
 
 // Whole numbers: crore (10,000,000), lakh (100,000), thousand, then the rest.
@@ -36,7 +36,7 @@ function wholeInWords(value: number): string {
   if (thousand) parts.push(`${belowHundred(thousand)} Thousand`)
   rest %= 1000
   if (rest) parts.push(belowThousand(rest))
-  return parts.join(" ")
+  return parts.join(", ")
 }
 
 export function amountInWords(amount: number) {
@@ -44,6 +44,6 @@ export function amountInWords(amount: number) {
   const rupees = Math.floor(paiseTotal / 100)
   const paise = paiseTotal % 100
   const sign = amount < 0 ? "Minus " : ""
-  const words = `${sign}Indian Rupee ${wholeInWords(rupees)}`
-  return paise ? `${words} and ${belowHundred(paise)} Paise Only` : `${words} Only`
+  const words = `${sign}${wholeInWords(rupees)} ${rupees === 1 ? "Rupee" : "Rupees"}`
+  return paise ? `${words} and ${belowHundred(paise)} Paise` : words
 }

@@ -30,9 +30,11 @@ export async function saveCompanyProfile(input: CompanyProfileInput): Promise<Ac
     .update({
       company_name: orNull(parsed.data.companyName),
       address: orNull(parsed.data.address),
+      address_2: orNull(parsed.data.address2),
       phone: orNull(parsed.data.phone),
       email: orNull(parsed.data.email),
       gstin: orNull(parsed.data.gstin),
+      pan: orNull(parsed.data.pan),
       bank_details: orNull(parsed.data.bankDetails),
     })
     .eq("id", true)

@@ -100,6 +100,14 @@ export function CompanyProfileCard({
                 hint="One line per row, as it should print."
                 rows={3}
               />
+              <FormTextareaField
+                control={form.control}
+                name="address2"
+                label="Second Address"
+                orientation="horizontal"
+                hint="Printed beside the first address, one line per row."
+                rows={3}
+              />
               <FormInputField
                 control={form.control}
                 name="phone"
@@ -119,6 +127,14 @@ export function CompanyProfileCard({
                 control={form.control}
                 name="gstin"
                 label="GSTIN"
+                orientation="horizontal"
+                autoComplete="off"
+                className="uppercase"
+              />
+              <FormInputField
+                control={form.control}
+                name="pan"
+                label="PAN"
                 orientation="horizontal"
                 autoComplete="off"
                 className="uppercase"

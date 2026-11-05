@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from "next/font/google"
+import { Arimo, Geist, Geist_Mono } from "next/font/google"
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -10,4 +10,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
-export const fontVariables = `${geistSans.variable} ${geistMono.variable}`
+// The printed quotation's font.
+const arimo = Arimo({
+  variable: "--font-document",
+  subsets: ["latin"],
+})
+
+export const fontVariables = `${geistSans.variable} ${geistMono.variable} ${arimo.variable}`

@@ -1,9 +1,9 @@
 import { CUSTOMER_CSV_COLUMNS, toCustomerCsvRow } from "@/features/customers/customer-csv"
 import { CUSTOMERS_LIST } from "@/features/customers/list-config"
-import { toCsv } from "@/lib/csv"
 import { applyListFilters, parseListQuery } from "@/lib/list-query"
 import { hasAccess } from "@/lib/permissions"
 import { fetchSession } from "@/lib/session"
+import { spreadsheetResponse } from "@/lib/spreadsheet-response"
 import { createClient } from "@/lib/supabase/server"
 
 // Supabase returns at most this many rows per request, so customers are read page by page.
@@ -45,12 +45,5 @@ export async function GET(request: Request) {
     if (data.length < PAGE_SIZE) break
   }
 
-  const date = new Date().toISOString().slice(0, 10)
-  return new Response(toCsv(rows), {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="Customers-${date}.csv"`,
-      "Cache-Control": "no-store",
-    },
-  })
+  return spreadsheetResponse(rows, "Customers", params.format)
 }

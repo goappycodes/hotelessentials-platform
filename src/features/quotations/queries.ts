@@ -74,7 +74,7 @@ const DOCUMENT_CUSTOMER_COLUMNS =
   "display_name, company_name, gstin, billing_attention, billing_street1, billing_street2, billing_city, billing_state, billing_pin_code, billing_country, billing_phone" as const
 
 const DOCUMENT_COMPANY_COLUMNS =
-  "company_name, address, phone, email, gstin, bank_details, gst_state_code, logo_path, signature_path" as const
+  "company_name, address, address_2, phone, email, gstin, pan, bank_details, gst_state_code, logo_path, signature_path" as const
 
 // Everything the quote document shows: the quotation and its lines (with how each line's
 // GST splits), the customer's billing details, the business's own details and the files.
@@ -83,7 +83,7 @@ export async function getQuotationDocument(supabase: Client, quotationId: string
     supabase.from("quotations").select("*").eq("id", quotationId).maybeSingle(),
     supabase
       .from("quotation_items")
-      .select("*, tax:tax_rates(tax_scope, cgst_rate, sgst_rate, igst_rate)")
+      .select("*, tax:tax_rates(tax_scope, cgst_rate, sgst_rate, igst_rate), item:items(sku)")
       .eq("quotation_id", quotationId)
       .order("sort_order"),
     supabase.from("organization_settings").select(DOCUMENT_COMPANY_COLUMNS).maybeSingle(),

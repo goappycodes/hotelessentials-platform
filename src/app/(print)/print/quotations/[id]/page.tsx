@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "Print quotation" }
 export default function PrintQuotationPage({ params }: PageProps<"/print/quotations/[id]">) {
   return (
     <main className="min-h-svh bg-muted/40 px-4 pb-8 print:bg-white print:p-0">
-      <style>{"@page { size: A4; margin: 8mm; }"}</style>
+      <style>{"@page { size: A4; margin: 13pt 0; }"}</style>
       <Suspense fallback={<PrintQuotationSkeleton />}>
         <PrintQuotation params={params} />
       </Suspense>
@@ -41,7 +41,7 @@ async function PrintQuotation({ params }: Pick<PageProps<"/print/quotations/[id]
     <>
       <PrintToolbar title={data.quote.quote_number} />
       <div className="mx-auto max-w-[210mm] border bg-white shadow-sm print:border-0 print:shadow-none">
-        <QuotationDocument data={data} showStatus={false} className="print:p-0" />
+        <QuotationDocument data={data} showStatus={false} className="print:w-full print:py-0" />
       </div>
     </>
   )

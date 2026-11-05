@@ -22,7 +22,7 @@ async function BusinessState() {
   const { data } = await supabase
     .from("organization_settings")
     .select(
-      "gst_state_code, company_name, address, phone, email, gstin, bank_details, logo_path, signature_path"
+      "gst_state_code, company_name, address, address_2, phone, email, gstin, pan, bank_details, logo_path, signature_path"
     )
     .maybeSingle()
   const paths = [data?.logo_path, data?.signature_path].filter((path): path is string =>
@@ -44,9 +44,11 @@ async function BusinessState() {
         defaultValues={{
           companyName: data?.company_name ?? "",
           address: data?.address ?? "",
+          address2: data?.address_2 ?? "",
           phone: data?.phone ?? "",
           email: data?.email ?? "",
           gstin: data?.gstin ?? "",
+          pan: data?.pan ?? "",
           bankDetails: data?.bank_details ?? "",
         }}
       />
