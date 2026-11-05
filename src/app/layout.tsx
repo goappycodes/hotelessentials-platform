@@ -1,11 +1,11 @@
-import type { Metadata } from "next"
+import type { Metadata } from "next";
 
-import { NavigationProgressProvider } from "@/components/layout/navigation-progress"
-import { APP_NAME } from "@/components/shared/brand"
-import { Toaster } from "@/components/ui/sonner"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { fontVariables } from "@/lib/fonts"
-import "./globals.css"
+import { NavigationProgressProvider } from "@/components/layout/navigation-progress";
+import { APP_NAME } from "@/components/shared/brand";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { fontVariables } from "@/lib/fonts";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: `%s · ${APP_NAME}`,
   },
   description: "Business management for hotel supply companies.",
-}
+};
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -22,8 +22,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <NavigationProgressProvider>
           <TooltipProvider>{children}</TooltipProvider>
         </NavigationProgressProvider>
-        <Toaster richColors position="top-right" />
+        <Toaster position="top-right" />
       </body>
     </html>
-  )
+  );
 }
