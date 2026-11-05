@@ -1,40 +1,45 @@
-"use client"
+"use client";
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import Link from "next/link"
-import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 
-import { signIn } from "@/actions/auth"
-import { FormError } from "@/components/shared/form-error"
-import { FormInputField } from "@/components/shared/form-input-field"
-import { SubmitButton } from "@/components/shared/submit-button"
-import { FieldGroup } from "@/components/ui/field"
-import { ROUTES } from "@/constants/routes"
-import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
-import { loginSchema, type LoginInput } from "@/lib/validations/auth"
+import { signIn } from "@/actions/auth";
+import { FormError } from "@/components/shared/form-error";
+import { FormInputField } from "@/components/shared/form-input-field";
+import { SubmitButton } from "@/components/shared/submit-button";
+import { FieldGroup } from "@/components/ui/field";
+import { ROUTES } from "@/constants/routes";
+import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid";
+import { loginSchema, type LoginInput } from "@/lib/validations/auth";
+import { EyeClosed } from "lucide-react";
 
 export function LoginForm() {
-  const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState<string>()
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string>();
+  const [isPasswordView, setIsPasswordView] = useState(false);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     // scrollToFirstInvalid does this, dropdowns included.
     shouldFocusError: false,
     defaultValues: { email: "", password: "" },
-  })
+  });
 
   function onSubmit(values: LoginInput) {
-    setError(undefined)
+    setError(undefined);
     startTransition(async () => {
-      const result = await signIn(values)
-      if (!result.success) setError(result.error)
-    })
+      const result = await signIn(values);
+      if (!result.success) setError(result.error);
+    });
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)} noValidate>
+    <form
+      onSubmit={form.handleSubmit(onSubmit, scrollToFirstInvalid)}
+      noValidate
+    >
       <FieldGroup>
         <FormError message={error} />
         <FormInputField
@@ -51,6 +56,8 @@ export function LoginForm() {
           label="Password"
           type="password"
           autoComplete="current-password"
+          placeholder="Enter your password"
+          showPasswordToggle
           labelAction={
             <Link
               href={ROUTES.forgotPassword}
@@ -65,5 +72,5 @@ export function LoginForm() {
         </SubmitButton>
       </FieldGroup>
     </form>
-  )
+  );
 }

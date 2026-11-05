@@ -13,7 +13,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
     <AuthCard
       title="Sign in"
       description="Welcome back. Sign in to your hotelessentials account."
-      footer={<p>Accounts are created by your administrator.</p>}
+      // footer={<p>Accounts are created by your administrator.</p>}
     >
       <Suspense>
         <LoginNotice searchParams={searchParams} />
