@@ -27,7 +27,7 @@ const SUMMARY_CARDS = [
   },
   {
     title: "Pending Sales Orders",
-    href: MODULE_NAV_ITEMS.salesOrders.href,
+    href: MODULE_NAV_ITEMS.salesOrders.create.href,
     label: "Confirmed orders waiting for despatch",
     emptyText: "No sales orders yet",
   },

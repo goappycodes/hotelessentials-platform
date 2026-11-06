@@ -24,6 +24,7 @@ export const ROUTES = {
   quotationsAdd: "/quotations/add",
   quotationsExport: "/quotations/export",
   salesOrders: "/sales-orders",
+  salesOrdersAdd: "/sales-orders/add",
   despatch: "/despatch",
   despatchAdd: "/despatch/add",
   reports: "/reports",

@@ -6,11 +6,14 @@ import { z } from "zod"
 import type { PermissionAction } from "@/constants/permissions"
 import { SALES_ORDER_STATUSES, SALES_ORDERS_LIST } from "@/features/sales-orders/list-config"
 import { getSalesOrderDocument, type SalesOrderDocumentData } from "@/features/sales-orders/queries"
+import { TAX_RATE_COLUMNS } from "@/features/taxes/tax-rates"
 import { applyListFilters, parseListQuery } from "@/lib/list-query"
 import { hasAccess } from "@/lib/permissions"
+import { computeQuotationTotals } from "@/lib/quotations"
 import { fetchSession } from "@/lib/session"
 import { getDatabaseErrorMessage } from "@/lib/supabase/database-errors"
 import { createClient } from "@/lib/supabase/server"
+import { quotationSchema, type QuotationInput } from "@/lib/validations/quotation"
 import type { ActionResult } from "@/types/actions"
 import type { Enums } from "@/types/database"
 
@@ -29,7 +32,92 @@ async function authorize(action: PermissionAction) {
 
 function getSalesOrderErrorMessage(error: PostgrestError) {
   if (error.code === "P0002") return NOT_FOUND
+  if (error.code === "42501") return NOT_ALLOWED
+  // Messages written for users by save_sales_order ("Add at least one item." …).
+  if (["23514", "23503"].includes(error.code) && !error.message.includes("violates")) {
+    return error.message
+  }
   return getDatabaseErrorMessage(error)
+}
+
+const num = (value: string) => Number(value || 0)
+const orNull = (value: string) => value.trim() || null
+
+const newOrderStatusSchema = z.enum(["Draft", "Confirmed"])
+
+// Creates a sales order by hand, with its lines, in one database transaction. Uses the
+// quotation form's values. Totals are worked out here from the lines, as for quotations,
+// and the database assigns the SO number.
+export async function createSalesOrder(
+  input: QuotationInput,
+  status: z.infer<typeof newOrderStatusSchema>
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = quotationSchema.safeParse(input)
+  const parsedStatus = newOrderStatusSchema.safeParse(status)
+  if (!parsed.success || !parsedStatus.success) return { success: false, error: INVALID_INPUT }
+  if (!(await authorize("create"))) return { success: false, error: NOT_ALLOWED }
+
+  const order = parsed.data
+  const supabase = await createClient()
+  const { data: taxes, error: taxError } = await supabase.from("tax_rates").select(TAX_RATE_COLUMNS)
+  if (taxError) return { success: false, error: getDatabaseErrorMessage(taxError) }
+
+  const lines = order.lines.map((line) => ({
+    quantity: num(line.quantity),
+    rate: num(line.rate),
+    discountValue: num(line.discountValue),
+    discountIsPercent: line.discountIsPercent,
+    taxId: line.taxId || null,
+  }))
+  const totals = computeQuotationTotals({
+    lines,
+    discountLevel: order.discountLevel,
+    discountValue: num(order.discountValue),
+    discountIsPercent: order.discountIsPercent,
+    isDiscountBeforeTax: order.isDiscountBeforeTax,
+    adjustment: num(order.adjustment),
+    taxes,
+  })
+
+  const { data, error } = await supabase.rpc("save_sales_order", {
+    sales_order: {
+      customer_id: order.customerId,
+      order_date: order.quoteDate,
+      reference_number: orNull(order.referenceNumber),
+      subject: orNull(order.subject),
+      salesperson_id: order.salespersonId || null,
+      place_of_supply: order.placeOfSupply || null,
+      status: parsedStatus.data,
+      discount_level: order.discountLevel,
+      discount_value: order.discountLevel === "Transaction" ? num(order.discountValue) : 0,
+      discount_is_percent: order.discountIsPercent,
+      is_discount_before_tax: order.isDiscountBeforeTax,
+      adjustment: num(order.adjustment),
+      adjustment_description: orNull(order.adjustmentDescription),
+      notes: orNull(order.notes),
+      terms: orNull(order.terms),
+      sub_total: totals.subTotal,
+      discount_total: totals.discountTotal,
+      tax_total: totals.taxTotal,
+      total: totals.total,
+    },
+    items: order.lines.map((line, index) => ({
+      item_id: line.itemId || null,
+      name: line.name,
+      description: orNull(line.description),
+      hsn_code: orNull(line.hsnCode),
+      unit: orNull(line.unit),
+      quantity: lines[index].quantity,
+      rate: lines[index].rate,
+      // Line discounts only count at line level.
+      discount_value: order.discountLevel === "Line Item" ? lines[index].discountValue : 0,
+      discount_is_percent: line.discountIsPercent,
+      tax_id: lines[index].taxId,
+      amount: totals.lineAmounts[index],
+    })),
+  })
+  if (error) return { success: false, error: getSalesOrderErrorMessage(error) }
+  return { success: true, data: { id: data } }
 }
 
 export async function getSalesOrderDetail(

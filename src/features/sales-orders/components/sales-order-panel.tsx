@@ -40,8 +40,7 @@ import type { Enums } from "@/types/database"
 type Loaded = { id: string; data: SalesOrderDocumentData | null; failed: boolean }
 
 // The opened sales order beside the list: Status, PDF/Print and Delete above the order.
-// Its details come from the quotation, so there's nothing to edit here. Loads in the
-// browser, so opening an order never leaves the Sales Orders page.
+// Loads in the browser, so opening an order never leaves the Sales Orders page.
 export function SalesOrderPanel({
   salesOrderId,
   previewTitle,
@@ -229,23 +228,25 @@ function SalesOrderView({
       </div>
 
       <div className="flex flex-1 flex-col gap-4 bg-muted/40 p-4 sm:p-6">
-        <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
-          <FileText className="size-4 shrink-0 text-primary" />
-          <p>
-            Created from quotation{" "}
-            {order.quotation_id && canViewQuotations ? (
-              <Link
-                href={quotationRoute(order.quotation_id)}
-                className="font-medium text-primary hover:underline"
-              >
-                {order.quote_number}
-              </Link>
-            ) : (
-              <span className="font-medium">{order.quote_number}</span>
-            )}
-            {!order.quotation_id && " (since deleted)"}.
-          </p>
-        </div>
+        {order.quote_number && (
+          <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
+            <FileText className="size-4 shrink-0 text-primary" />
+            <p>
+              Created from quotation{" "}
+              {order.quotation_id && canViewQuotations ? (
+                <Link
+                  href={quotationRoute(order.quotation_id)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {order.quote_number}
+                </Link>
+              ) : (
+                <span className="font-medium">{order.quote_number}</span>
+              )}
+              {!order.quotation_id && " (since deleted)"}.
+            </p>
+          </div>
+        )}
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
           <SalesOrderDocument data={data} className="min-w-[595.28pt]" />
         </div>
@@ -259,8 +260,8 @@ function SalesOrderView({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {order.so_number}?</AlertDialogTitle>
             <AlertDialogDescription>
-              The sales order and its items are deleted for good. Quotation {order.quote_number}{" "}
-              stays as it is.
+              The sales order and its items are deleted for good.
+              {order.quote_number && ` Quotation ${order.quote_number} stays as it is.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

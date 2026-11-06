@@ -1,6 +1,7 @@
 "use client"
 
-import { ClipboardList } from "lucide-react"
+import { ClipboardList, Plus } from "lucide-react"
+import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
 
@@ -8,6 +9,7 @@ import { countSalesOrders } from "@/actions/sales-orders"
 import { PageContainer } from "@/components/layout/page-container"
 import { ListFilterMenu } from "@/components/shared/list-filter-menu"
 import { ListPagination } from "@/components/shared/list-pagination"
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
   Empty,
@@ -16,6 +18,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { SALES_ORDER_PARAM } from "@/constants/routes"
 import { SalesOrderPanel } from "@/features/sales-orders/components/sales-order-panel"
 import { SalesOrdersSideList } from "@/features/sales-orders/components/sales-orders-side-list"
@@ -26,11 +29,14 @@ import {
 } from "@/features/sales-orders/list-config"
 import type { Enums } from "@/types/database"
 
+const navItem = MODULE_NAV_ITEMS.salesOrders
+
 export type SalesOrderRow = {
   id: string
   orderDate: string
   soNumber: string
-  quoteNumber: string
+  // Null for an order added by hand.
+  quoteNumber: string | null
   customerName: string
   status: Enums<"sales_order_status">
   total: number
@@ -43,6 +49,7 @@ export function SalesOrdersWorkspace({
   openRow,
   hasNextPage,
   isFiltered,
+  canCreate,
   canEdit,
   canDelete,
   canViewQuotations,
@@ -53,6 +60,7 @@ export function SalesOrdersWorkspace({
   openRow: SalesOrderRow | null
   hasNextPage: boolean
   isFiltered: boolean
+  canCreate: boolean
   canEdit: boolean
   canDelete: boolean
   // Whether the order can link to the quotation it came from.
@@ -96,6 +104,13 @@ export function SalesOrdersWorkspace({
         <aside className="hidden w-80 shrink-0 flex-col border-r bg-card lg:flex">
           <div className="flex h-14 shrink-0 items-center gap-2 border-b px-3">
             <h2 className="flex-1 truncate font-semibold">All Sales Orders</h2>
+            {canCreate && (
+              <Button asChild size="icon-sm" aria-label={navItem.create.title}>
+                <Link href={navItem.create.href}>
+                  <Plus />
+                </Link>
+              </Button>
+            )}
           </div>
           <SalesOrdersSideList rows={sideRows} openId={openId} hrefFor={hrefFor} onOpen={open} />
           <div className="shrink-0 border-t bg-card p-2">
@@ -144,7 +159,7 @@ export function SalesOrdersWorkspace({
               <EmptyDescription>
                 {isFiltered
                   ? "No sales orders match your search or filters."
-                  : "An order appears here when a quotation is accepted."}
+                  : "An order appears here when a quotation is accepted, or add one with New."}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

@@ -40,7 +40,13 @@ async function SalesOrders({ searchParams }: Pick<PageProps<"/sales-orders">, "s
         { label: navItem.title },
       ]}
       actions={
-        canView && <ListPageActions entityLabel={navItem.title} config={SALES_ORDERS_LIST} />
+        canView && (
+          <ListPageActions
+            create={hasAccess(session, navItem.access, "create") ? navItem.create : undefined}
+            entityLabel={navItem.title}
+            config={SALES_ORDERS_LIST}
+          />
+        )
       }
     />
   )
@@ -66,6 +72,7 @@ async function SalesOrders({ searchParams }: Pick<PageProps<"/sales-orders">, "s
       openRow={openRow}
       hasNextPage={hasNextPage}
       isFiltered={isFiltered}
+      canCreate={hasAccess(session, navItem.access, "create")}
       canEdit={hasAccess(session, navItem.access, "edit")}
       canDelete={hasAccess(session, navItem.access, "delete")}
       canViewQuotations={hasAccess(session, MODULE_NAV_ITEMS.quotations.access)}

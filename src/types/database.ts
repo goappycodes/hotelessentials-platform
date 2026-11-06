@@ -315,7 +315,8 @@ export type Database = {
           so_number: string
           // Null once the quotation is deleted; the order stays.
           quotation_id: string | null
-          quote_number: string
+          // Null for an order added by hand.
+          quote_number: string | null
           customer_id: string
           customer_name: string
           order_date: string
@@ -339,7 +340,7 @@ export type Database = {
           created_at: string
           updated_at: string
         }
-        // Orders are only created by the database, when a quotation is accepted.
+        // Created by the database: when a quotation is accepted, or through save_sales_order.
         Insert: never
         Update: Partial<Database["public"]["Tables"]["sales_orders"]["Row"]>
         Relationships: [
@@ -902,6 +903,16 @@ export type Database = {
       next_quote_number: {
         Args: Record<PropertyKey, never>
         Returns: string | null
+      }
+      save_sales_order: {
+        Args: {
+          // sales_orders columns, totals included (see actions/sales-orders.ts)
+          sales_order: Json
+          // [{ item_id, name, description, hsn_code, unit, quantity, rate, discount_value,
+          //    discount_is_percent, tax_id, amount }]
+          items: Json
+        }
+        Returns: string
       }
       save_quotation: {
         Args: {

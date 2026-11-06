@@ -58,7 +58,7 @@ export function SalesOrdersTable({
                 {order.soNumber}
               </a>
             </TableCell>
-            <TableCell className="px-4 text-muted-foreground">{order.quoteNumber}</TableCell>
+            <TableCell className="px-4 text-muted-foreground">{order.quoteNumber ?? "—"}</TableCell>
             <TableCell className="max-w-64 truncate px-4">{order.customerName}</TableCell>
             <TableCell className="px-4">
               <SalesOrderStatusBadge status={order.status} />

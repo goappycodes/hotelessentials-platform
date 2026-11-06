@@ -43,6 +43,17 @@ async function authorize(action: PermissionAction) {
   return hasAccess(session, "quotations", action) ? session : null
 }
 
+// The customer and item pickers also serve the sales order form.
+async function canUsePickers() {
+  const session = await fetchSession()
+  if (!session?.user.isActive) return false
+  return (
+    hasAccess(session, "quotations", "create") ||
+    hasAccess(session, "quotations", "edit") ||
+    hasAccess(session, "sales_orders", "create")
+  )
+}
+
 function getQuotationErrorMessage(error: PostgrestError) {
   if (error.code === "23505") return "Another quotation already uses this quote number."
   if (error.code === "P0002") return "This quotation no longer exists."
@@ -352,13 +363,7 @@ export async function searchQuoteItems(
 ): Promise<QuoteItemPage> {
   const parsed = itemSearchSchema.safeParse({ term, priceListId, offset })
   if (!parsed.success) return NO_ITEMS
-  const session = await fetchSession()
-  if (
-    !session?.user.isActive ||
-    !(hasAccess(session, "quotations", "create") || hasAccess(session, "quotations", "edit"))
-  ) {
-    return NO_ITEMS
-  }
+  if (!(await canUsePickers())) return NO_ITEMS
 
   const supabase = await createClient()
   // Anything may sit between words, so "PAN GREY" finds "PAN (GREY)".
@@ -492,13 +497,7 @@ export async function searchQuoteCustomers(term: string, offset = 0): Promise<Qu
   const parsed = customerSearchSchema.safeParse({ term, offset })
   const none: QuoteCustomerPage = { customers: [], hasMore: false }
   if (!parsed.success) return none
-  const session = await fetchSession()
-  if (
-    !session?.user.isActive ||
-    !(hasAccess(session, "quotations", "create") || hasAccess(session, "quotations", "edit"))
-  ) {
-    return none
-  }
+  if (!(await canUsePickers())) return none
 
   const supabase = await createClient()
   // Anything may sit between words, so "PAN GREY" finds "PAN (GREY)".
@@ -540,13 +539,7 @@ export async function getLinePrices(
 ): Promise<Record<string, LinePrice>> {
   const parsed = linePricesSchema.safeParse({ priceListId, itemIds: [...new Set(itemIds)] })
   if (!parsed.success) return {}
-  const session = await fetchSession()
-  if (
-    !session?.user.isActive ||
-    !(hasAccess(session, "quotations", "create") || hasAccess(session, "quotations", "edit"))
-  ) {
-    return {}
-  }
+  if (!(await canUsePickers())) return {}
 
   const supabase = await createClient()
   const { data: items } = await supabase
