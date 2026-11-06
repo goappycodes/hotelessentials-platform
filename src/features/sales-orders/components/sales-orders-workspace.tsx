@@ -53,6 +53,8 @@ export function SalesOrdersWorkspace({
   canEdit,
   canDelete,
   canViewQuotations,
+  canCreateDespatch,
+  canViewDespatch,
   header,
 }: {
   rows: SalesOrderRow[]
@@ -65,6 +67,8 @@ export function SalesOrdersWorkspace({
   canDelete: boolean
   // Whether the order can link to the quotation it came from.
   canViewQuotations: boolean
+  canCreateDespatch: boolean
+  canViewDespatch: boolean
   // The page title and actions shown above the full list.
   header: React.ReactNode
 }) {
@@ -129,6 +133,8 @@ export function SalesOrdersWorkspace({
             canEdit={canEdit}
             canDelete={canDelete}
             canViewQuotations={canViewQuotations}
+            canCreateDespatch={canCreateDespatch}
+            canViewDespatch={canViewDespatch}
             onClose={close}
             onListChange={refreshList}
           />

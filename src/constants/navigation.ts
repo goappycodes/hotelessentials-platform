@@ -121,7 +121,7 @@ export const MODULE_NAV_ITEMS = {
     title: "Despatch",
     href: ROUTES.despatch,
     icon: Truck,
-    description: "Plan and track despatch of sales orders.",
+    description: "Pack and send confirmed sales orders, in full or in parts.",
     create: { href: ROUTES.despatchAdd, title: "New Despatch" },
     access: "despatch",
     search: { placeholder: "Search despatches", scope: "despatch" },

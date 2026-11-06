@@ -71,7 +71,7 @@ export type QuotationFormOptions = Awaited<ReturnType<typeof getQuotationFormOpt
 const SIGNED_URL_SECONDS = 60 * 60
 
 const DOCUMENT_CUSTOMER_COLUMNS =
-  "display_name, company_name, gstin, billing_attention, billing_street1, billing_street2, billing_city, billing_state, billing_pin_code, billing_country, billing_phone" as const
+  "display_name, company_name, gstin, billing_attention, billing_street1, billing_street2, billing_city, billing_state, billing_pin_code, billing_country, billing_phone, shipping_attention, shipping_street1, shipping_street2, shipping_city, shipping_state, shipping_pin_code, shipping_phone" as const
 
 export const DOCUMENT_COMPANY_COLUMNS =
   "company_name, address, address_2, phone, email, gstin, pan, bank_details, gst_state_code, logo_path, signature_path" as const

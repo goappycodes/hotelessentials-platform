@@ -2,6 +2,7 @@
 
 import { z } from "zod"
 
+import { despatchRoute, inventoryAdjustmentRoute } from "@/constants/routes"
 import { INVENTORY_LIST } from "@/features/inventory/list-config"
 import { getItemImages, type ItemImageView } from "@/features/items/queries"
 import { applyListFilters, parseListQuery } from "@/lib/list-query"
@@ -46,8 +47,11 @@ export type StockDetail = {
     date: string
     quantity: number
   }[] | null
+  // Every change to the stock, newest first: adjustments in, adjustments and despatches out.
   history: {
     id: string
+    // Null when the user can't open that record.
+    href: string | null
     date: string
     reason: string | null
     referenceNumber: string | null
@@ -63,7 +67,7 @@ export async function getStockDetail(itemId: string): Promise<StockDetail | null
   const canViewOrders = hasAccess(session, "sales_orders")
 
   const supabase = await createClient()
-  const [images, orders, history] = await Promise.all([
+  const [images, orders, history, despatched] = await Promise.all([
     getItemImages(supabase, id.data),
     canViewOrders
       ? supabase
@@ -86,8 +90,17 @@ export async function getStockDetail(itemId: string): Promise<StockDetail | null
       .order("adjustment_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(DETAIL_LIMIT),
+    supabase
+      .from("despatch_items")
+      .select("id, quantity, despatch:despatches!inner(id, despatch_number, despatch_date, customer_name)")
+      .eq("item_id", id.data)
+      .eq("deducts_stock", true)
+      .limit(DETAIL_LIMIT),
   ])
-  if (orders?.error || history.error) throw new Error("Failed to load the stock details")
+  if (orders?.error || history.error || despatched.error) {
+    throw new Error("Failed to load the stock details")
+  }
+  const canOpenDespatches = hasAccess(session, "despatch")
 
   return {
     images,
@@ -100,13 +113,24 @@ export async function getStockDetail(itemId: string): Promise<StockDetail | null
         // An order can list the same item on more than one line.
         quantity: order.lines.reduce((total, line) => total + line.quantity, 0),
       })) ?? null,
-    history: history.data.map((adjustment) => ({
-      id: adjustment.id,
-      date: adjustment.adjustment_date,
-      reason: adjustment.reason,
-      referenceNumber: adjustment.reference_number,
-      // One line per item in an adjustment.
-      quantity: adjustment.lines[0]?.quantity_adjusted ?? 0,
-    })),
+    history: [
+      ...history.data.map((adjustment) => ({
+        id: adjustment.id,
+        href: inventoryAdjustmentRoute(adjustment.id),
+        date: adjustment.adjustment_date,
+        reason: adjustment.reason,
+        referenceNumber: adjustment.reference_number,
+        // One line per item in an adjustment.
+        quantity: adjustment.lines[0]?.quantity_adjusted ?? 0,
+      })),
+      ...despatched.data.map((line) => ({
+        id: line.id,
+        href: canOpenDespatches ? despatchRoute(line.despatch.id) : null,
+        date: line.despatch.despatch_date,
+        reason: `Despatched to ${line.despatch.customer_name}`,
+        referenceNumber: line.despatch.despatch_number,
+        quantity: -line.quantity,
+      })),
+    ].sort((a, b) => b.date.localeCompare(a.date)),
   }
 }

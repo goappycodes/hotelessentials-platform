@@ -84,6 +84,23 @@ export function salesOrderPrintRoute(id: string) {
   return `/print/sales-orders/${id}`
 }
 
+// Despatches open beside the list on /despatch (?despatch=<id>), like sales orders.
+export const DESPATCH_PARAM = "despatch"
+
+export function despatchRoute(id: string) {
+  return `${ROUTES.despatch}?${DESPATCH_PARAM}=${id}`
+}
+
+// A new despatch that starts on this sales order.
+export function newDespatchForOrderRoute(salesOrderId: string) {
+  return `${ROUTES.despatchAdd}?${SALES_ORDER_PARAM}=${salesOrderId}`
+}
+
+// A despatch note on its own page, for printing or saving as PDF.
+export function despatchPrintRoute(id: string) {
+  return `/print/despatch/${id}`
+}
+
 export function customerRoute(id: string) {
   return `${ROUTES.customers}/${id}`
 }

@@ -92,10 +92,105 @@ function termEntries(text: string | null | undefined) {
 }
 
 // A name starting with its own code doesn't repeat it: "[1P00415] Soda Cup" → "Soda Cup".
-function nameWithoutCode(name: string, sku: string | null | undefined) {
+export function nameWithoutCode(name: string, sku: string | null | undefined) {
   if (!sku) return name
   const prefix = `[${sku}]`
   return name.startsWith(prefix) ? name.slice(prefix.length).trim() : name
+}
+
+// An address as printed lines, leaving out what's empty.
+export function documentAddressLines(entries: (string | null | undefined | false)[]) {
+  return entries.filter((line): line is string => Boolean(line && line.trim()))
+}
+
+// The top of every document: the letterhead, the date and number, who it's for and its title.
+export function DocumentHeading({
+  company,
+  logoUrl,
+  customerName,
+  customerGstin,
+  addressLines,
+  title,
+  date,
+  number,
+  details = [],
+}: {
+  company: DocumentData["company"]
+  logoUrl: string | null
+  customerName: string
+  customerGstin: string | null | undefined
+  addressLines: string[]
+  title: string
+  date: string
+  number: string
+  // Extra rows under the date and number.
+  details?: { label: string; value: string }[]
+}) {
+  const firstAddress = [
+    ...lines(company?.address),
+    company?.gstin && `GST NO : ${company.gstin}`,
+    company?.pan && `PAN No : ${company.pan}`,
+    company?.email && `Email : ${company.email}`,
+    company?.phone && `Contact No. : ${company.phone}`,
+  ].filter((line): line is string => Boolean(line))
+
+  return (
+    <>
+      <header className="relative h-[124pt] border-b-[1.5pt] border-[#9ca3af]">
+        <h1 className="mb-[12.25pt] text-[19pt] leading-[22pt] font-bold text-[#40535c] uppercase">
+          {company?.company_name || "Your company"}
+        </h1>
+        <div className="flex">
+          <div className="w-[219.9pt] shrink-0">
+            {firstAddress.map((line, index) => (
+              <p key={index}>{line}</p>
+            ))}
+          </div>
+          <div>
+            {lines(company?.address_2).map((line, index) => (
+              <p key={index}>{line}</p>
+            ))}
+          </div>
+        </div>
+        {logoUrl && (
+          <img
+            src={logoUrl}
+            alt={company?.company_name ?? "Logo"}
+            className="absolute top-0 right-[3.8pt] h-[57pt] w-[134.4pt] object-contain object-right"
+          />
+        )}
+        <dl className="absolute top-[73.4pt] right-0 text-right leading-[11.7pt]">
+          <div>
+            <dt className="inline">Date: </dt>
+            <dd className="inline">{formatQuoteDate(date)}</dd>
+          </div>
+          <div>
+            <dt className="inline">{title} No: </dt>
+            <dd className="inline">{number}</dd>
+          </div>
+          {details.map((detail) => (
+            <div key={detail.label}>
+              <dt className="inline">{detail.label}: </dt>
+              <dd className="inline">{detail.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </header>
+
+      <section className="pt-[12.3pt] text-[8.5pt] leading-[9.5pt]">
+        <p className="mb-[2.1pt] font-bold">To,</p>
+        <p className="text-[11pt] leading-[13pt] font-bold">{customerName}</p>
+        {addressLines.map((line, index) => (
+          <p key={index}>{line}</p>
+        ))}
+        {customerGstin && <p>GST No : {customerGstin}</p>}
+      </section>
+
+      <h2 className="mt-[14.3pt] mb-[3.3pt] text-center text-[14pt] leading-[16pt] font-bold">
+        {title}
+      </h2>
+    </>
+  )
 }
 
 export function QuotationDocument({
@@ -124,22 +219,14 @@ export function QuotationDocument({
 
   const transactionDiscount = quote.discount_level === "Transaction" ? quote.discount_total : 0
 
-  const firstAddress = [
-    ...lines(company?.address),
-    company?.gstin && `GST NO : ${company.gstin}`,
-    company?.pan && `PAN No : ${company.pan}`,
-    company?.email && `Email : ${company.email}`,
-    company?.phone && `Contact No. : ${company.phone}`,
-  ].filter((line): line is string => Boolean(line))
-
   const billingLines = customer
-    ? [
+    ? documentAddressLines([
         customer.billing_attention,
         customer.billing_street1,
         customer.billing_street2,
         [customer.billing_city, customer.billing_pin_code].filter(Boolean).join(" "),
         customer.billing_state,
-      ].filter((line): line is string => Boolean(line?.trim()))
+      ])
     : []
 
   return (
@@ -162,61 +249,17 @@ export function QuotationDocument({
         </div>
       )}
 
-      <header className="relative h-[124pt] border-b-[1.5pt] border-[#9ca3af]">
-        <h1 className="mb-[12.25pt] text-[19pt] leading-[22pt] font-bold text-[#40535c] uppercase">
-          {company?.company_name || "Your company"}
-        </h1>
-        <div className="flex">
-          <div className="w-[219.9pt] shrink-0">
-            {firstAddress.map((line, index) => (
-              <p key={index}>{line}</p>
-            ))}
-          </div>
-          <div>
-            {lines(company?.address_2).map((line, index) => (
-              <p key={index}>{line}</p>
-            ))}
-          </div>
-        </div>
-        {data.logoUrl && (
-          <img
-            src={data.logoUrl}
-            alt={company?.company_name ?? "Logo"}
-            className="absolute top-0 right-[3.8pt] h-[57pt] w-[134.4pt] object-contain object-right"
-          />
-        )}
-        <dl className="absolute top-[73.4pt] right-0 text-right leading-[11.7pt]">
-          <div>
-            <dt className="inline">Date: </dt>
-            <dd className="inline">{formatQuoteDate(quote.quote_date)}</dd>
-          </div>
-          <div>
-            <dt className="inline">{title} No: </dt>
-            <dd className="inline">{quote.quote_number}</dd>
-          </div>
-          {details.map((detail) => (
-            <div key={detail.label}>
-              <dt className="inline">{detail.label}: </dt>
-              <dd className="inline">{detail.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </header>
-
-      <section className="pt-[12.3pt] text-[8.5pt] leading-[9.5pt]">
-        <p className="mb-[2.1pt] font-bold">To,</p>
-        <p className="text-[11pt] leading-[13pt] font-bold">
-          {customer?.display_name ?? quote.customer_name}
-        </p>
-        {billingLines.map((line, index) => (
-          <p key={index}>{line}</p>
-        ))}
-        {customer?.gstin && <p>GST No : {customer.gstin}</p>}
-      </section>
-
-      <h2 className="mt-[14.3pt] mb-[3.3pt] text-center text-[14pt] leading-[16pt] font-bold">
-        {title}
-      </h2>
+      <DocumentHeading
+        company={company}
+        logoUrl={data.logoUrl}
+        customerName={customer?.display_name ?? quote.customer_name}
+        customerGstin={customer?.gstin}
+        addressLines={billingLines}
+        title={title}
+        date={quote.quote_date}
+        number={quote.quote_number}
+        details={details}
+      />
 
       <table className="w-full table-fixed border-collapse">
         <colgroup>

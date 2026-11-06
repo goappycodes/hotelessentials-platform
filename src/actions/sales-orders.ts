@@ -33,6 +33,9 @@ async function authorize(action: PermissionAction) {
 function getSalesOrderErrorMessage(error: PostgrestError) {
   if (error.code === "P0002") return NOT_FOUND
   if (error.code === "42501") return NOT_ALLOWED
+  if (error.code === "23503" && error.message.includes("despatches")) {
+    return "This sales order has despatches, so it can't be deleted."
+  }
   // Messages written for users by save_sales_order ("Add at least one item." …).
   if (["23514", "23503"].includes(error.code) && !error.message.includes("violates")) {
     return error.message

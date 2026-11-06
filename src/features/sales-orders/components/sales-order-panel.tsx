@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronDown, Ellipsis, FileText, FileX, Printer, Trash2, X } from "lucide-react"
+import { ChevronDown, Ellipsis, FileText, FileX, Printer, Trash2, Truck, X } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useEffect, useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -26,7 +26,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { quotationRoute, salesOrderPrintRoute } from "@/constants/routes"
+import {
+  despatchRoute,
+  newDespatchForOrderRoute,
+  quotationRoute,
+  salesOrderPrintRoute,
+} from "@/constants/routes"
 import { QuotationDocumentSkeleton } from "@/features/quotations/components/quotation-panel"
 import { SalesOrderDocument } from "@/features/sales-orders/components/sales-order-document"
 import { SALES_ORDER_STATUS_ACTIONS } from "@/features/sales-orders/list-config"
@@ -47,6 +52,8 @@ export function SalesOrderPanel({
   canEdit,
   canDelete,
   canViewQuotations,
+  canCreateDespatch,
+  canViewDespatch,
   onClose,
   onListChange,
 }: {
@@ -56,6 +63,8 @@ export function SalesOrderPanel({
   canEdit: boolean
   canDelete: boolean
   canViewQuotations: boolean
+  canCreateDespatch: boolean
+  canViewDespatch: boolean
   onClose: () => void
   // The list beside the panel needs reloading (status changed, order deleted).
   onListChange: () => void
@@ -113,6 +122,8 @@ export function SalesOrderPanel({
       canEdit={canEdit}
       canDelete={canDelete}
       canViewQuotations={canViewQuotations}
+      canCreateDespatch={canCreateDespatch}
+      canViewDespatch={canViewDespatch}
       onClose={onClose}
       onChanged={reload}
       onDeleted={() => {
@@ -129,6 +140,8 @@ function SalesOrderView({
   canEdit,
   canDelete,
   canViewQuotations,
+  canCreateDespatch,
+  canViewDespatch,
   onClose,
   onChanged,
   onDeleted,
@@ -137,11 +150,13 @@ function SalesOrderView({
   canEdit: boolean
   canDelete: boolean
   canViewQuotations: boolean
+  canCreateDespatch: boolean
+  canViewDespatch: boolean
   onClose: () => void
   onChanged: () => void
   onDeleted: () => void
 }) {
-  const { order } = data
+  const { order, despatches } = data
   const [isPending, startTransition] = useTransition()
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
 
@@ -204,6 +219,14 @@ function SalesOrderView({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        {canCreateDespatch && order.status === "Confirmed" && (
+          <Button asChild variant="ghost" size="sm">
+            <Link href={newDespatchForOrderRoute(order.id)}>
+              <Truck />
+              Despatch
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="ghost" size="sm">
           <a href={salesOrderPrintRoute(order.id)} target="_blank" rel="noreferrer">
             <Printer />
@@ -245,6 +268,28 @@ function SalesOrderView({
               )}
               {!order.quotation_id && " (since deleted)"}.
             </p>
+          </div>
+        )}
+        {despatches.length > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
+            <Truck className="mt-0.5 size-4 shrink-0 text-primary" />
+            <ul className="flex flex-wrap gap-x-4 gap-y-1">
+              {despatches.map((despatch) => (
+                <li key={despatch.id}>
+                  {canViewDespatch ? (
+                    <Link
+                      href={despatchRoute(despatch.id)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {despatch.despatch_number}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{despatch.despatch_number}</span>
+                  )}{" "}
+                  <span className="text-muted-foreground">{despatch.status}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">

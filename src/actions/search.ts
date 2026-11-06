@@ -3,6 +3,7 @@
 import { z } from "zod"
 
 import { searchCustomers } from "@/features/customers/search"
+import { searchDespatches } from "@/features/despatch/search"
 import { searchInventory } from "@/features/inventory/search"
 import { searchInventoryAdjustments } from "@/features/inventory-adjustments/search"
 import { searchItems } from "@/features/items/search"
@@ -31,7 +32,7 @@ const PROVIDERS: Record<SearchScope, SearchProvider> = {
   customers: { access: "customers", search: searchCustomers },
   quotations: { access: "quotations", search: searchQuotations },
   sales_orders: { access: "sales_orders", search: searchSalesOrders },
-  despatch: { access: "despatch" },
+  despatch: { access: "despatch", search: searchDespatches },
 }
 
 const inputSchema = z.object({

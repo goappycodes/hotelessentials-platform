@@ -19,7 +19,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   ROUTES,
-  inventoryAdjustmentRoute,
   itemRoute,
   salesOrderRoute,
 } from "@/constants/routes"
@@ -232,7 +231,7 @@ function ConfirmedOrders({
   )
 }
 
-// Adjusted inventory adjustments that changed this item's stock, newest first.
+// Adjustments and despatches that changed this item's stock, newest first.
 function StockHistory({
   history,
   unit,
@@ -243,7 +242,7 @@ function StockHistory({
   if (history.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No inventory adjustments yet. Use Adjust Stock to add or remove stock.
+        No stock changes yet. Use Adjust Stock to add or remove stock.
       </p>
     )
   }
@@ -256,19 +255,20 @@ function StockHistory({
             <TableHead className={HEAD_CLASS}>Date</TableHead>
             <TableHead className={HEAD_CLASS}>Reason</TableHead>
             <TableHead className={HEAD_CLASS}>Reference#</TableHead>
-            <TableHead className={cn(HEAD_CLASS, "text-right")}>Quantity Adjusted</TableHead>
+            <TableHead className={cn(HEAD_CLASS, "text-right")}>Quantity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {history.map((entry) => (
             <TableRow key={entry.id}>
               <TableCell className="px-4 whitespace-nowrap">
-                <Link
-                  href={inventoryAdjustmentRoute(entry.id)}
-                  className="text-primary hover:underline"
-                >
-                  {formatDay(entry.date)}
-                </Link>
+                {entry.href ? (
+                  <Link href={entry.href} className="text-primary hover:underline">
+                    {formatDay(entry.date)}
+                  </Link>
+                ) : (
+                  formatDay(entry.date)
+                )}
               </TableCell>
               <TableCell className="px-4 whitespace-normal">{entry.reason ?? "—"}</TableCell>
               <TableCell className="px-4 text-muted-foreground">

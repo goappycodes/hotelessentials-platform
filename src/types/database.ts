@@ -309,6 +309,95 @@ export type Database = {
           },
         ]
       }
+      despatches: {
+        Row: {
+          id: string
+          despatch_number: string
+          sales_order_id: string
+          so_number: string
+          customer_id: string
+          customer_name: string
+          despatch_date: string
+          status: Database["public"]["Enums"]["despatch_status"]
+          transporter: string | null
+          tracking_number: string | null
+          vehicle_number: string | null
+          notes: string | null
+          despatched_at: string | null
+          delivered_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        // Created through save_despatch only.
+        Insert: never
+        // Numbers, the order and the lines never change.
+        Update: {
+          despatch_date?: string
+          status?: Database["public"]["Enums"]["despatch_status"]
+          transporter?: string | null
+          tracking_number?: string | null
+          vehicle_number?: string | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despatches_sales_order_id_fkey"
+            columns: ["sales_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despatches_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      despatch_items: {
+        Row: {
+          id: string
+          despatch_id: string
+          sales_order_item_id: string
+          item_id: string | null
+          name: string
+          description: string | null
+          unit: string | null
+          quantity: number
+          // This line took stock out.
+          deducts_stock: boolean
+          sort_order: number
+        }
+        // Written by save_despatch only.
+        Insert: never
+        Update: never
+        Relationships: [
+          {
+            foreignKeyName: "despatch_items_despatch_id_fkey"
+            columns: ["despatch_id"]
+            isOneToOne: false
+            referencedRelation: "despatches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despatch_items_sales_order_item_id_fkey"
+            columns: ["sales_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "sales_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despatch_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_orders: {
         Row: {
           id: string
@@ -924,6 +1013,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string | null
       }
+      save_despatch: {
+        Args: {
+          // { sales_order_id, despatch_date, status, transporter, tracking_number,
+          //   vehicle_number, notes }
+          despatch: Json
+          // [{ sales_order_item_id, quantity }]
+          items: Json
+        }
+        Returns: string
+      }
       save_sales_order: {
         Args: {
           // sales_orders columns, totals included (see actions/sales-orders.ts)
@@ -1005,6 +1104,7 @@ export type Database = {
       discount_level: "Transaction" | "Line Item"
       quotation_status: "Draft" | "Sent" | "Accepted" | "Declined"
       sales_order_status: "Draft" | "Confirmed" | "Closed"
+      despatch_status: "Packed" | "Despatched" | "Delivered"
       direct_tax_kind: "TDS" | "TCS"
       customer_type: "Business" | "Individual"
       gst_treatment:

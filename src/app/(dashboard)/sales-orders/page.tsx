@@ -76,6 +76,8 @@ async function SalesOrders({ searchParams }: Pick<PageProps<"/sales-orders">, "s
       canEdit={hasAccess(session, navItem.access, "edit")}
       canDelete={hasAccess(session, navItem.access, "delete")}
       canViewQuotations={hasAccess(session, MODULE_NAV_ITEMS.quotations.access)}
+      canCreateDespatch={hasAccess(session, MODULE_NAV_ITEMS.despatch.access, "create")}
+      canViewDespatch={hasAccess(session, MODULE_NAV_ITEMS.despatch.access)}
       header={header}
     />
   )

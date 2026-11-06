@@ -7,7 +7,7 @@ type Client = Awaited<ReturnType<typeof createRequestClient>>
 
 // A sales order with everything its document shows.
 export async function getSalesOrderDocument(supabase: Client, salesOrderId: string) {
-  const [orderResult, linesResult, companyResult] = await Promise.all([
+  const [orderResult, linesResult, companyResult, despatchesResult] = await Promise.all([
     supabase.from("sales_orders").select("*").eq("id", salesOrderId).maybeSingle(),
     supabase
       .from("sales_order_items")
@@ -15,6 +15,11 @@ export async function getSalesOrderDocument(supabase: Client, salesOrderId: stri
       .eq("sales_order_id", salesOrderId)
       .order("sort_order"),
     supabase.from("organization_settings").select(DOCUMENT_COMPANY_COLUMNS).maybeSingle(),
+    supabase
+      .from("despatches")
+      .select("id, despatch_number, status")
+      .eq("sales_order_id", salesOrderId)
+      .order("despatch_number"),
   ])
   if (orderResult.error || linesResult.error) throw new Error("Failed to load the sales order")
   const order = orderResult.data
@@ -22,6 +27,7 @@ export async function getSalesOrderDocument(supabase: Client, salesOrderId: stri
 
   return {
     order,
+    despatches: despatchesResult.data ?? [],
     ...(await getDocumentDetails(supabase, order.customer_id, companyResult.data, linesResult.data)),
   }
 }
