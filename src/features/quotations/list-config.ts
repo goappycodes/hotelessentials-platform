@@ -24,7 +24,11 @@ export const STATUS_ACTIONS: {
   done: string
 }[] = [
   { status: "Sent", label: "Mark as Sent", done: "Quotation marked as sent." },
-  { status: "Accepted", label: "Mark as Accepted", done: "Quotation marked as accepted." },
+  {
+    status: "Accepted",
+    label: "Mark as Accepted",
+    done: "Quotation accepted. Its sales order is in Sales Orders.",
+  },
   { status: "Declined", label: "Mark as Declined", done: "Quotation marked as declined." },
   { status: "Draft", label: "Back to Draft", done: "Quotation moved back to draft." },
 ]

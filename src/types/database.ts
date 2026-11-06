@@ -309,6 +309,101 @@ export type Database = {
           },
         ]
       }
+      sales_orders: {
+        Row: {
+          id: string
+          so_number: string
+          // Null once the quotation is deleted; the order stays.
+          quotation_id: string | null
+          quote_number: string
+          customer_id: string
+          customer_name: string
+          order_date: string
+          reference_number: string | null
+          subject: string | null
+          salesperson_id: string | null
+          place_of_supply: string | null
+          status: Database["public"]["Enums"]["sales_order_status"]
+          discount_level: Database["public"]["Enums"]["discount_level"]
+          discount_value: number
+          discount_is_percent: boolean
+          is_discount_before_tax: boolean
+          adjustment: number
+          adjustment_description: string | null
+          notes: string | null
+          terms: string | null
+          sub_total: number
+          discount_total: number
+          tax_total: number
+          total: number
+          created_at: string
+          updated_at: string
+        }
+        // Orders are only created by the database, when a quotation is accepted.
+        Insert: never
+        Update: Partial<Database["public"]["Tables"]["sales_orders"]["Row"]>
+        Relationships: [
+          {
+            foreignKeyName: "sales_orders_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: true
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_order_items: {
+        Row: {
+          id: string
+          sales_order_id: string
+          item_id: string | null
+          name: string
+          description: string | null
+          hsn_code: string | null
+          unit: string | null
+          quantity: number
+          rate: number
+          discount_value: number
+          discount_is_percent: boolean
+          tax_id: string | null
+          tax_name: string | null
+          tax_rate: number | null
+          amount: number
+          sort_order: number
+        }
+        Insert: never
+        Update: never
+        Relationships: [
+          {
+            foreignKeyName: "sales_order_items_sales_order_id_fkey"
+            columns: ["sales_order_id"]
+            isOneToOne: false
+            referencedRelation: "sales_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_items_tax_id_fkey"
+            columns: ["tax_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hsn_codes: {
         Row: {
           id: string
@@ -878,6 +973,7 @@ export type Database = {
       customer_tax_preference: "Taxable" | "Tax Exempt"
       discount_level: "Transaction" | "Line Item"
       quotation_status: "Draft" | "Sent" | "Accepted" | "Declined"
+      sales_order_status: "Draft" | "Confirmed" | "Closed"
       direct_tax_kind: "TDS" | "TCS"
       customer_type: "Business" | "Individual"
       gst_treatment:

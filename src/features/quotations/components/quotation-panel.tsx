@@ -2,6 +2,7 @@
 
 import {
   ChevronDown,
+  ClipboardList,
   Ellipsis,
   FileX,
   Paperclip,
@@ -37,7 +38,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { quotationEditRoute, quotationPrintRoute } from "@/constants/routes"
+import { quotationEditRoute, quotationPrintRoute, salesOrderRoute } from "@/constants/routes"
 import { QuotationDocument } from "@/features/quotations/components/quotation-document"
 import { isQuotationExpired } from "@/features/quotations/components/quotation-status-badge"
 import { STATUS_ACTIONS } from "@/features/quotations/list-config"
@@ -150,7 +151,7 @@ function QuotationView({
   onChanged: () => void
   onDeleted: () => void
 }) {
-  const { quote, attachments } = data
+  const { quote, attachments, salesOrder } = data
   const [isPending, startTransition] = useTransition()
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const isExpired = isQuotationExpired(quote, todayInIndia())
@@ -285,6 +286,18 @@ function QuotationView({
             >
               Mark As Sent
             </Button>
+          </div>
+        )}
+        {salesOrder && (
+          <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
+            <ClipboardList className="size-4 shrink-0 text-primary" />
+            <p>
+              Sales order{" "}
+              <Link href={salesOrderRoute(salesOrder.id)} className="font-medium text-primary hover:underline">
+                {salesOrder.so_number}
+              </Link>{" "}
+              was created from this quotation. Later changes here don&apos;t change the order.
+            </p>
           </div>
         )}
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">

@@ -26,6 +26,34 @@ const RIBBON_CLASS: Record<string, string> = {
   Accepted: "bg-[#3aa76d]",
   Declined: "bg-[#d0453c]",
   Expired: "bg-[#d48a2c]",
+  // Sales orders
+  Confirmed: "bg-[#4a8bd6]",
+  Closed: "bg-[#3aa76d]",
+}
+
+type DocumentRecord = Pick<
+  QuotationDocumentData["quote"],
+  | "adjustment"
+  | "adjustment_description"
+  | "customer_name"
+  | "discount_level"
+  | "discount_total"
+  | "notes"
+  | "quote_date"
+  | "quote_number"
+  | "sub_total"
+  | "tax_total"
+  | "terms"
+  | "total"
+> & { status: string }
+
+// A quotation or a sales order: both print in this layout.
+export type DocumentData = Pick<QuotationDocumentData, "customer" | "company" | "logoUrl"> & {
+  quote: DocumentRecord
+  lines: Pick<
+    QuotationDocumentData["lines"][number],
+    "amount" | "description" | "id" | "imageUrl" | "item" | "name" | "quantity" | "tax_rate"
+  >[]
 }
 
 // Column widths in points, in order; they add up to the page's 543.28pt.
@@ -72,11 +100,17 @@ function nameWithoutCode(name: string, sku: string | null | undefined) {
 
 export function QuotationDocument({
   data,
+  title = "Quotation",
+  details = [],
   isExpired = false,
   showStatus = true,
   className,
 }: {
-  data: QuotationDocumentData
+  data: DocumentData
+  // What the document is, in its heading, number and total in words.
+  title?: string
+  // Extra rows under the date and number.
+  details?: { label: string; value: string }[]
   isExpired?: boolean
   // The status ribbon in the corner; off for the copy that goes to the customer.
   showStatus?: boolean
@@ -110,7 +144,7 @@ export function QuotationDocument({
 
   return (
     <article
-      aria-label={`Quotation ${quote.quote_number}`}
+      aria-label={`${title} ${quote.quote_number}`}
       className={cn(
         "relative mx-auto w-[595.28pt] max-w-full overflow-hidden bg-white px-[26pt] py-[13pt] font-(family-name:--font-document) text-[7.5pt] leading-[11.25pt] text-[#151826] [print-color-adjust:exact]",
         className
@@ -157,9 +191,15 @@ export function QuotationDocument({
             <dd className="inline">{formatQuoteDate(quote.quote_date)}</dd>
           </div>
           <div>
-            <dt className="inline">Quotation No: </dt>
+            <dt className="inline">{title} No: </dt>
             <dd className="inline">{quote.quote_number}</dd>
           </div>
+          {details.map((detail) => (
+            <div key={detail.label}>
+              <dt className="inline">{detail.label}: </dt>
+              <dd className="inline">{detail.value}</dd>
+            </div>
+          ))}
         </dl>
       </header>
 
@@ -175,7 +215,7 @@ export function QuotationDocument({
       </section>
 
       <h2 className="mt-[14.3pt] mb-[3.3pt] text-center text-[14pt] leading-[16pt] font-bold">
-        Quotation
+        {title}
       </h2>
 
       <table className="w-full table-fixed border-collapse">
@@ -258,7 +298,7 @@ export function QuotationDocument({
           </tr>
           <tr>
             <th className={cn(SUMMARY_LABEL, "bg-[#f9fafb] text-left")}>
-              Total Quotation Amount in Words
+              Total {title} Amount in Words
             </th>
             <td className={cn(SUMMARY_VALUE, "text-left font-bold")}>
               {amountInWords(quote.total)}

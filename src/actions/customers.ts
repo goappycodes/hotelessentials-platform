@@ -29,6 +29,9 @@ function getCustomerErrorMessage(error: PostgrestError) {
   if (error.code === "23503" && error.message.includes("quotations")) {
     return "This customer has quotations, so it can't be deleted. Mark it as inactive instead."
   }
+  if (error.code === "23503" && error.message.includes("sales_orders")) {
+    return "This customer has sales orders, so it can't be deleted. Mark it as inactive instead."
+  }
   if (error.message.includes("gstin_for_registered")) return "Enter the customer's GSTIN."
   if (error.message.includes("exemption_reason_for_exempt")) {
     return "Enter why the customer is exempt from tax."

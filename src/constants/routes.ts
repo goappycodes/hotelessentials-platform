@@ -24,7 +24,6 @@ export const ROUTES = {
   quotationsAdd: "/quotations/add",
   quotationsExport: "/quotations/export",
   salesOrders: "/sales-orders",
-  salesOrdersAdd: "/sales-orders/add",
   despatch: "/despatch",
   despatchAdd: "/despatch/add",
   reports: "/reports",
@@ -68,6 +67,18 @@ export function quotationEditRoute(id: string) {
 // The quote on its own, for printing or saving as PDF.
 export function quotationPrintRoute(id: string) {
   return `/print/quotations/${id}`
+}
+
+// Sales orders open beside the list on /sales-orders (?order=<id>), like quotations.
+export const SALES_ORDER_PARAM = "order"
+
+export function salesOrderRoute(id: string) {
+  return `${ROUTES.salesOrders}?${SALES_ORDER_PARAM}=${id}`
+}
+
+// A sales order on its own page, for printing or saving as PDF.
+export function salesOrderPrintRoute(id: string) {
+  return `/print/sales-orders/${id}`
 }
 
 export function customerRoute(id: string) {

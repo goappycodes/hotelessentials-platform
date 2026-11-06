@@ -7,6 +7,7 @@ import { searchInventoryAdjustments } from "@/features/inventory-adjustments/sea
 import { searchItems } from "@/features/items/search"
 import { searchPriceLists } from "@/features/price-lists/search"
 import { searchQuotations } from "@/features/quotations/search"
+import { searchSalesOrders } from "@/features/sales-orders/search"
 import { searchUsers } from "@/features/users/search"
 import { hasAccess, type AccessScope } from "@/lib/permissions"
 import { fetchSession } from "@/lib/session"
@@ -27,7 +28,7 @@ const PROVIDERS: Record<SearchScope, SearchProvider> = {
   inventory_adjustments: { access: "inventory_adjustments", search: searchInventoryAdjustments },
   customers: { access: "customers", search: searchCustomers },
   quotations: { access: "quotations", search: searchQuotations },
-  sales_orders: { access: "sales_orders" },
+  sales_orders: { access: "sales_orders", search: searchSalesOrders },
   despatch: { access: "despatch" },
 }
 

@@ -73,13 +73,13 @@ const SIGNED_URL_SECONDS = 60 * 60
 const DOCUMENT_CUSTOMER_COLUMNS =
   "display_name, company_name, gstin, billing_attention, billing_street1, billing_street2, billing_city, billing_state, billing_pin_code, billing_country, billing_phone" as const
 
-const DOCUMENT_COMPANY_COLUMNS =
+export const DOCUMENT_COMPANY_COLUMNS =
   "company_name, address, address_2, phone, email, gstin, pan, bank_details, gst_state_code, logo_path, signature_path" as const
 
 // Everything the quote document shows: the quotation and its lines (with how each line's
 // GST splits), the customer's billing details, the business's own details and the files.
 export async function getQuotationDocument(supabase: Client, quotationId: string) {
-  const [quoteResult, linesResult, companyResult, attachments] = await Promise.all([
+  const [quoteResult, linesResult, companyResult, attachments, salesOrderResult] = await Promise.all([
     supabase.from("quotations").select("*").eq("id", quotationId).maybeSingle(),
     supabase
       .from("quotation_items")
@@ -88,21 +88,51 @@ export async function getQuotationDocument(supabase: Client, quotationId: string
       .order("sort_order"),
     supabase.from("organization_settings").select(DOCUMENT_COMPANY_COLUMNS).maybeSingle(),
     getQuotationAttachments(supabase, quotationId),
+    // Hidden from anyone who can't view sales orders.
+    supabase.from("sales_orders").select("id, so_number").eq("quotation_id", quotationId).maybeSingle(),
   ])
   if (quoteResult.error || linesResult.error) throw new Error("Failed to load the quotation")
   const quote = quoteResult.data
   if (!quote) return null
 
-  const company = companyResult.data
-  const itemIds = [
-    ...new Set(linesResult.data.flatMap((line) => (line.item_id ? [line.item_id] : []))),
-  ]
+  return {
+    quote,
+    attachments,
+    salesOrder: salesOrderResult.data,
+    ...(await getDocumentDetails(supabase, quote.customer_id, companyResult.data, linesResult.data)),
+  }
+}
+
+type DocumentCompany = Pick<
+  Tables<"organization_settings">,
+  | "company_name"
+  | "address"
+  | "address_2"
+  | "phone"
+  | "email"
+  | "gstin"
+  | "pan"
+  | "bank_details"
+  | "gst_state_code"
+  | "logo_path"
+  | "signature_path"
+>
+
+// What a printed quotation or sales order shows besides its own record: the customer, the
+// company details and logo, and each line's item picture.
+export async function getDocumentDetails<Line extends { item_id: string | null }>(
+  supabase: Client,
+  customerId: string,
+  company: DocumentCompany | null,
+  lines: Line[]
+) {
+  const itemIds = [...new Set(lines.flatMap((line) => (line.item_id ? [line.item_id] : [])))]
   const companyPaths = [company?.logo_path, company?.signature_path].filter(
     (path): path is string => Boolean(path)
   )
 
   const [customerResult, itemImagesResult, companyUrls] = await Promise.all([
-    supabase.from("customers").select(DOCUMENT_CUSTOMER_COLUMNS).eq("id", quote.customer_id).maybeSingle(),
+    supabase.from("customers").select(DOCUMENT_CUSTOMER_COLUMNS).eq("id", customerId).maybeSingle(),
     itemIds.length
       ? supabase
           .from("item_images")
@@ -121,8 +151,7 @@ export async function getQuotationDocument(supabase: Client, quotationId: string
   const imageUrls = await signedUrls(supabase, ITEM_IMAGES_BUCKET, [...firstImagePath.values()])
 
   return {
-    quote,
-    lines: linesResult.data.map((line) => {
+    lines: lines.map((line) => {
       const path = line.item_id ? firstImagePath.get(line.item_id) : undefined
       return { ...line, imageUrl: (path && imageUrls.get(path)) || null }
     }),
@@ -130,7 +159,6 @@ export async function getQuotationDocument(supabase: Client, quotationId: string
     company,
     logoUrl: (company?.logo_path && companyUrls.get(company.logo_path)) || null,
     signatureUrl: (company?.signature_path && companyUrls.get(company.signature_path)) || null,
-    attachments,
   }
 }
 
