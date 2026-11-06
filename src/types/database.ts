@@ -1016,7 +1016,7 @@ export type Database = {
       save_despatch: {
         Args: {
           // { sales_order_id, despatch_date, status, transporter, tracking_number,
-          //   vehicle_number, notes }
+          //   vehicle_number, notes }, plus despatch_number on import
           despatch: Json
           // [{ sales_order_item_id, quantity }]
           items: Json

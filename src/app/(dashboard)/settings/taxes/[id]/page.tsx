@@ -10,6 +10,7 @@ import {
   type BreadcrumbEntry,
 } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { TaxForm, TaxFormSkeleton } from "@/features/taxes/components/tax-form"
 import { formatTaxBreakdown, TAX_RATE_COLUMNS } from "@/features/taxes/tax-rates"
@@ -80,18 +81,20 @@ async function EditTax({ params }: Pick<PageProps<"/settings/taxes/[id]">, "para
         description={`${tax.tax_scope} · ${formatTaxBreakdown(tax)}`}
         breadcrumbs={breadcrumbs(tax.name)}
       />
-      <TaxForm
-        mode="edit"
-        taxId={tax.id}
-        defaultValues={{
-          name: tax.name,
-          taxScope: tax.tax_scope,
-          cgstRate: toInput(tax.cgst_rate),
-          sgstRate: toInput(tax.sgst_rate),
-          igstRate: toInput(tax.igst_rate),
-          isActive: tax.is_active,
-        }}
-      />
+      <FreshForm>
+        <TaxForm
+          mode="edit"
+          taxId={tax.id}
+          defaultValues={{
+            name: tax.name,
+            taxScope: tax.tax_scope,
+            cgstRate: toInput(tax.cgst_rate),
+            sgstRate: toInput(tax.sgst_rate),
+            igstRate: toInput(tax.igst_rate),
+            isActive: tax.is_active,
+          }}
+        />
+      </FreshForm>
     </>
   )
 }

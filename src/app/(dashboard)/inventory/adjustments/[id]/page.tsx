@@ -10,6 +10,7 @@ import {
   type BreadcrumbEntry,
 } from "@/components/layout/page-header";
 import { AccessDenied } from "@/components/shared/access-denied";
+import { FreshForm } from "@/components/shared/fresh-form";
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation";
 import { ADJUSTMENT_ACCOUNTS } from "@/constants/inventory";
 import {
@@ -136,14 +137,16 @@ async function AdjustmentDetails({
           </div>
         }
       />
-      <AdjustmentForm
-        mode="edit"
-        adjustmentId={adjustment.id}
-        status={adjustment.status}
-        items={items}
-        defaultValues={defaultValues}
-        readOnly={!hasAccess(session, navItem.access, "edit")}
-      />
+      <FreshForm>
+        <AdjustmentForm
+          mode="edit"
+          adjustmentId={adjustment.id}
+          status={adjustment.status}
+          items={items}
+          defaultValues={defaultValues}
+          readOnly={!hasAccess(session, navItem.access, "edit")}
+        />
+      </FreshForm>
     </>
   );
 }

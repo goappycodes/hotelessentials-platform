@@ -5,6 +5,7 @@ import { z } from "zod"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { ItemForm, ItemFormSkeleton } from "@/features/items/components/item-form"
 import { toClonedItemInput } from "@/features/items/item-input"
@@ -55,11 +56,13 @@ async function NewItemForm({ searchParams }: Pick<PageProps<"/items/add">, "sear
   ])
 
   return (
-    <ItemForm
-      mode="create"
-      hsnCodes={hsnCodes}
-      taxRates={taxRates}
-      defaultValues={source?.data ? toClonedItemInput(source.data) : undefined}
-    />
+    <FreshForm>
+      <ItemForm
+        mode="create"
+        hsnCodes={hsnCodes}
+        taxRates={taxRates}
+        defaultValues={source?.data ? toClonedItemInput(source.data) : undefined}
+      />
+    </FreshForm>
   )
 }

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { AccessDenied } from "@/components/shared/access-denied";
+import { FreshForm } from "@/components/shared/fresh-form";
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation";
 import { ITEM_PARAM } from "@/constants/routes";
 import {
@@ -57,5 +58,9 @@ async function NewAdjustmentForm({
     ? items.find((item) => item.id === requested.data && item.is_active)?.id
     : undefined;
 
-  return <AdjustmentForm mode="create" items={items} itemId={itemId} />;
+  return (
+    <FreshForm>
+      <AdjustmentForm key={itemId} mode="create" items={items} itemId={itemId} />
+    </FreshForm>
+  );
 }

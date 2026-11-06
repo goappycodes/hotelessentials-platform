@@ -28,6 +28,7 @@ export const ROUTES = {
   salesOrdersAdd: "/sales-orders/add",
   despatch: "/despatch",
   despatchAdd: "/despatch/add",
+  despatchExport: "/despatch/export",
   reports: "/reports",
   users: "/users",
   usersAdd: "/users/add",
@@ -114,8 +115,7 @@ export function inventoryAdjustmentRoute(id: string) {
   return `${ROUTES.inventoryAdjustments}/${id}`
 }
 
-// A new adjustment that starts with this item in its table. Not used for now: Adjust Stock
-// opens an empty adjustment.
+// A new adjustment that starts with this item in its table (Adjust Stock on an item).
 export function newAdjustmentForItemRoute(itemId: string) {
   return `${ROUTES.inventoryAdjustmentsAdd}?${ITEM_PARAM}=${itemId}`
 }

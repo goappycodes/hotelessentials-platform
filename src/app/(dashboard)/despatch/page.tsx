@@ -8,6 +8,7 @@ import { AccessDenied } from "@/components/shared/access-denied"
 import { ListPageActions } from "@/components/shared/list-page-actions"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { DESPATCH_PARAM } from "@/constants/routes"
+import { DespatchActionsMenu } from "@/features/despatch/components/despatch-actions-menu"
 import { DespatchWorkspace } from "@/features/despatch/components/despatch-workspace"
 import { DespatchesTableSkeleton } from "@/features/despatch/components/despatches-table"
 import { getDespatchRows } from "@/features/despatch/despatch-rows"
@@ -45,6 +46,12 @@ async function Despatch({ searchParams }: Pick<PageProps<"/despatch">, "searchPa
             create={hasAccess(session, navItem.access, "create") ? navItem.create : undefined}
             entityLabel={navItem.title}
             config={DESPATCH_LIST}
+            menu={
+              <DespatchActionsMenu
+                entityLabel={navItem.title}
+                canImport={hasAccess(session, navItem.access, "create")}
+              />
+            }
           />
         )
       }

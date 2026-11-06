@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { AccessDenied } from "@/components/shared/access-denied";
+import { FreshForm } from "@/components/shared/fresh-form";
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation";
 import {
   CustomerForm,
@@ -46,10 +47,12 @@ async function NewCustomerForm() {
   const options = await getCustomerFormOptions(await createRequestClient());
   // The person adding the customer owns it, unless they pick someone else.
   return (
-    <CustomerForm
-      mode="create"
-      options={options}
-      defaultValues={newCustomerInput(session.user.id)}
-    />
+    <FreshForm>
+      <CustomerForm
+        mode="create"
+        options={options}
+        defaultValues={newCustomerInput(session.user.id)}
+      />
+    </FreshForm>
   );
 }

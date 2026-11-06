@@ -86,10 +86,10 @@ const STATUSES: Record<string, Status> = {
 const normalize = (value: string) => value.trim().toLowerCase()
 
 // Blank → null. Excel's leading ' (marks a cell as text) is dropped.
-const text = (value: string) => value.trim().replace(/^'+/, "").trim() || null
+export const text = (value: string) => value.trim().replace(/^'+/, "").trim() || null
 
 // "₹1,200.50" → 1200.5, blank → 0, not a number → NaN. Kept to 4 decimals, as stored.
-function parseAmount(value: string) {
+export function parseAmount(value: string) {
   const amount = value.replace(/INR|₹|,|\s/gi, "")
   if (!amount) return 0
   if (!/^-?\d+(\.\d+)?$/.test(amount)) return Number.NaN
@@ -97,7 +97,7 @@ function parseAmount(value: string) {
 }
 
 // 2026-11-04, 04/11/2026 or 04-11-2026 (day first) → 2026-11-04. Null when it isn't a date.
-function parseDate(value: string) {
+export function parseDate(value: string) {
   const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
   const dayFirst = value.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
   const [year, month, day] = iso

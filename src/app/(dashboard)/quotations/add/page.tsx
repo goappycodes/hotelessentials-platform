@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import {
   QuotationForm,
@@ -54,12 +55,14 @@ async function NewQuotationForm() {
   // The person writing the quote is its salesperson unless they pick someone else.
   defaults.salespersonId = session.user.id
   return (
-    <QuotationForm
-      mode="create"
-      canManageDirectTaxes={isAdminRole(session.role)}
-      options={options}
-      defaultValues={defaults}
-      suggestedQuoteNumber={suggestedQuoteNumber}
-    />
+    <FreshForm>
+      <QuotationForm
+        mode="create"
+        canManageDirectTaxes={isAdminRole(session.role)}
+        options={options}
+        defaultValues={defaults}
+        suggestedQuoteNumber={suggestedQuoteNumber}
+      />
+    </FreshForm>
   )
 }

@@ -10,6 +10,7 @@ import {
   type BreadcrumbEntry,
 } from "@/components/layout/page-header";
 import { AccessDenied } from "@/components/shared/access-denied";
+import { FreshForm } from "@/components/shared/fresh-form";
 import { Badge } from "@/components/ui/badge";
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation";
 import {
@@ -106,13 +107,15 @@ async function CustomerDetails({
           </div>
         }
       />
-      <CustomerForm
-        mode="edit"
-        customerId={customer.id}
-        options={options}
-        defaultValues={toCustomerInput(customer, contactsResult.data)}
-        readOnly={!hasAccess(session, navItem.access, "edit")}
-      />
+      <FreshForm>
+        <CustomerForm
+          mode="edit"
+          customerId={customer.id}
+          options={options}
+          defaultValues={toCustomerInput(customer, contactsResult.data)}
+          readOnly={!hasAccess(session, navItem.access, "edit")}
+        />
+      </FreshForm>
     </>
   );
 }

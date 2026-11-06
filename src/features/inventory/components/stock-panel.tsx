@@ -17,11 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  ROUTES,
-  itemRoute,
-  salesOrderRoute,
-} from "@/constants/routes"
+import { itemRoute, newAdjustmentForItemRoute, salesOrderRoute } from "@/constants/routes"
 import { StockStatusBadge } from "@/features/inventory/components/stock-status-badge"
 import type { StockRow } from "@/features/inventory/components/stock-workspace"
 import { ItemImagesGallery } from "@/features/items/components/item-images-gallery"
@@ -106,7 +102,7 @@ export function StockPanel({
         )}
         {canAdjustStock && (
           <Button asChild size="sm">
-            <Link href={ROUTES.inventoryAdjustmentsAdd}>Adjust Stock</Link>
+            <Link href={newAdjustmentForItemRoute(row.id)}>Adjust Stock</Link>
           </Button>
         )}
         <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={onClose}>

@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import {
   UserForm,
@@ -38,5 +39,9 @@ export default function NewUserPage() {
 async function NewUserForm() {
   const { role } = await requireUser()
   if (!isAdminRole(role)) return <AccessDenied area="user management" />
-  return <UserForm mode="create" canAssignOwner={role === "owner"} />
+  return (
+    <FreshForm>
+      <UserForm mode="create" canAssignOwner={role === "owner"} />
+    </FreshForm>
+  )
 }

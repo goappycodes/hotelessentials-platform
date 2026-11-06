@@ -5,6 +5,7 @@ import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
 import { AccessGate } from "@/components/shared/access-gate"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { TaxForm, TaxFormSkeleton } from "@/features/taxes/components/tax-form"
 
@@ -26,7 +27,9 @@ export default function NewTaxPage() {
       />
       <Suspense fallback={<TaxFormSkeleton />}>
         <AccessGate scope={navItem.access} denied={<AccessDenied area="tax settings" />}>
-          <TaxForm mode="create" />
+          <FreshForm>
+            <TaxForm mode="create" />
+          </FreshForm>
         </AccessGate>
       </Suspense>
     </PageContainer>

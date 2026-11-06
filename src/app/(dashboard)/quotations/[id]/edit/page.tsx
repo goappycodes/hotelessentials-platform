@@ -10,6 +10,7 @@ import {
   type BreadcrumbEntry,
 } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { quotationRoute } from "@/constants/routes"
 import {
@@ -109,16 +110,18 @@ async function QuotationDetails({ params }: Pick<PageProps<"/quotations/[id]/edi
           />
         }
       />
-      <QuotationForm
-        mode="edit"
-        canManageDirectTaxes={isAdminRole(session.role)}
-        quotationId={quote.id}
-        options={options}
-        defaultValues={toQuotationInput(quote, linesResult.data)}
-        customer={customer}
-        attachments={attachments}
-        readOnly={!hasAccess(session, navItem.access, "edit")}
-      />
+      <FreshForm>
+        <QuotationForm
+          mode="edit"
+          canManageDirectTaxes={isAdminRole(session.role)}
+          quotationId={quote.id}
+          options={options}
+          defaultValues={toQuotationInput(quote, linesResult.data)}
+          customer={customer}
+          attachments={attachments}
+          readOnly={!hasAccess(session, navItem.access, "edit")}
+        />
+      </FreshForm>
     </>
   )
 }

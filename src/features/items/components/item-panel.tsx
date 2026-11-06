@@ -32,7 +32,7 @@ import { ItemImagesGallery } from "@/features/items/components/item-images-galle
 import { invalidateItemDetail, loadItemDetail } from "@/features/items/item-detail-cache"
 import { formatTaxName } from "@/features/taxes/tax-rates"
 // inventoryAdjustmentRoute comes back with the hidden History tab.
-import { ROUTES /* , inventoryAdjustmentRoute */ } from "@/constants/routes"
+import { newAdjustmentForItemRoute /* , inventoryAdjustmentRoute */ } from "@/constants/routes"
 import {
   formatCurrency,
   // formatDay, // for the hidden History tab
@@ -132,7 +132,7 @@ export function ItemPanel({
             !can.adjustStock
               ? null
               : stock && item.is_active
-                ? { href: ROUTES.inventoryAdjustmentsAdd }
+                ? { href: newAdjustmentForItemRoute(item.id) }
                 : {
                     blockedReason:
                       item.type === "Service"

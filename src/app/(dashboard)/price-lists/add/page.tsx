@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { AccessDenied } from "@/components/shared/access-denied";
+import { FreshForm } from "@/components/shared/fresh-form";
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation";
 import {
   PriceListForm,
@@ -44,5 +45,9 @@ async function NewPriceListForm() {
   }
 
   const items = await getPriceListItemOptions(await createRequestClient());
-  return <PriceListForm mode="create" items={items} />;
+  return (
+    <FreshForm>
+      <PriceListForm mode="create" items={items} />
+    </FreshForm>
+  );
 }

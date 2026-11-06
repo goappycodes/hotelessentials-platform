@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { QuotationFormSkeleton } from "@/features/quotations/components/quotation-form"
 import { getQuotationFormOptions } from "@/features/quotations/queries"
@@ -45,5 +46,9 @@ async function NewSalesOrderForm() {
   const defaults = newQuotationInput(todayInIndia())
   // The person entering the order is its salesperson unless they pick someone else.
   defaults.salespersonId = session.user.id
-  return <SalesOrderForm options={options} defaultValues={defaults} />
+  return (
+    <FreshForm>
+      <SalesOrderForm options={options} defaultValues={defaults} />
+    </FreshForm>
+  )
 }

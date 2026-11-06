@@ -10,6 +10,7 @@ import {
   type BreadcrumbEntry,
 } from "@/components/layout/page-header";
 import { AccessDenied } from "@/components/shared/access-denied";
+import { FreshForm } from "@/components/shared/fresh-form";
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation";
 import {
   PriceListForm,
@@ -120,13 +121,15 @@ async function PriceListDetails({
         ].join(" · ")}
         breadcrumbs={breadcrumbs(list.name)}
       />
-      <PriceListForm
-        mode="edit"
-        priceListId={list.id}
-        items={items}
-        defaultValues={defaultValues}
-        readOnly={!hasAccess(session, navItem.access, "edit")}
-      />
+      <FreshForm>
+        <PriceListForm
+          mode="edit"
+          priceListId={list.id}
+          items={items}
+          defaultValues={defaultValues}
+          readOnly={!hasAccess(session, navItem.access, "edit")}
+        />
+      </FreshForm>
     </>
   );
 }

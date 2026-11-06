@@ -1,15 +1,14 @@
 "use server"
 
-import type { PostgrestError } from "@supabase/supabase-js"
 import { z } from "zod"
 
 import type { PermissionAction } from "@/constants/permissions"
+import { getDespatchErrorMessage } from "@/features/despatch/despatch-errors"
 import { DESPATCH_LIST, DESPATCH_STATUSES } from "@/features/despatch/list-config"
 import { getDespatchDocument, type DespatchDocumentData } from "@/features/despatch/queries"
 import { applyListFilters, parseListQuery } from "@/lib/list-query"
 import { hasAccess } from "@/lib/permissions"
 import { fetchSession } from "@/lib/session"
-import { getDatabaseErrorMessage } from "@/lib/supabase/database-errors"
 import { createClient } from "@/lib/supabase/server"
 import {
   despatchDetailsSchema,
@@ -32,16 +31,6 @@ async function authorize(action: PermissionAction) {
   const session = await fetchSession()
   if (!session?.user.isActive) return null
   return hasAccess(session, "despatch", action) ? session : null
-}
-
-function getDespatchErrorMessage(error: PostgrestError) {
-  if (error.code === "P0002") return error.message
-  if (error.code === "42501") return NOT_ALLOWED
-  // Messages written for users by the database ("Not enough stock of …").
-  if (["23514", "23503"].includes(error.code) && !error.message.includes("violates")) {
-    return error.message
-  }
-  return getDatabaseErrorMessage(error)
 }
 
 // Creates a despatch and its lines in one database transaction, which assigns the number.

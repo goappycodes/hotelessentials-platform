@@ -10,6 +10,7 @@ import {
   type BreadcrumbEntry,
 } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { itemRoute } from "@/constants/routes"
 import { ItemForm, ItemFormSkeleton } from "@/features/items/components/item-form"
@@ -86,17 +87,19 @@ async function EditItem({ params }: Pick<PageProps<"/items/[id]/edit">, "params"
         description={[item.type, item.sku && `SKU ${item.sku}`].filter(Boolean).join(" · ")}
         breadcrumbs={breadcrumbs(item.name, item.id)}
       />
-      <ItemForm
-        mode="edit"
-        itemId={item.id}
-        hsnCodes={hsnCodes}
-        taxRates={taxRates}
-        images={images}
-        defaultValues={toItemInput(item)}
-        readOnly={!hasAccess(session, navItem.access, "edit") || item.is_locked}
-        isLocked={item.is_locked}
-        hasStockHistory={(historyResult.count ?? 0) > 0}
-      />
+      <FreshForm>
+        <ItemForm
+          mode="edit"
+          itemId={item.id}
+          hsnCodes={hsnCodes}
+          taxRates={taxRates}
+          images={images}
+          defaultValues={toItemInput(item)}
+          readOnly={!hasAccess(session, navItem.access, "edit") || item.is_locked}
+          isLocked={item.is_locked}
+          hasStockHistory={(historyResult.count ?? 0) > 0}
+        />
+      </FreshForm>
     </>
   )
 }

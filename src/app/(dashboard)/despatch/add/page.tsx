@@ -5,6 +5,7 @@ import { z } from "zod"
 import { PageContainer } from "@/components/layout/page-container"
 import { PageHeader } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import { SALES_ORDER_PARAM } from "@/constants/routes"
 import { DespatchForm, DespatchFormSkeleton } from "@/features/despatch/components/despatch-form"
@@ -52,5 +53,9 @@ async function NewDespatchForm({
     orderId.success ? getDespatchOrder(supabase, orderId.data) : null,
   ])
 
-  return <DespatchForm options={options} order={order} today={todayInIndia()} />
+  return (
+    <FreshForm>
+      <DespatchForm options={options} order={order} today={todayInIndia()} />
+    </FreshForm>
+  )
 }

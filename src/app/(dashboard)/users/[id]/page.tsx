@@ -9,6 +9,7 @@ import {
   type BreadcrumbEntry,
 } from "@/components/layout/page-header"
 import { AccessDenied } from "@/components/shared/access-denied"
+import { FreshForm } from "@/components/shared/fresh-form"
 import { DASHBOARD_NAV_ITEM, MODULE_NAV_ITEMS } from "@/constants/navigation"
 import {
   UserForm,
@@ -90,23 +91,25 @@ async function EditUser({ params }: Pick<PageProps<"/users/[id]">, "params">) {
         description="Update their details, role and what they can access."
         breadcrumbs={breadcrumbs(fullName)}
       />
-      <UserForm
-        mode="edit"
-        userId={id}
-        canAssignOwner={session.role === "owner"}
-        isSelf={id === session.user.id}
-        readOnly={profile.role === "owner" && session.role !== "owner"}
-        defaultValues={{
-          firstName: profile.first_name,
-          lastName: profile.last_name ?? "",
-          email: profile.email,
-          phone: profile.phone ?? "",
-          password: "",
-          role: profile.role,
-          isActive: profile.is_active,
-          permissions: toModulePermissions(permissionsResult.data),
-        }}
-      />
+      <FreshForm>
+        <UserForm
+          mode="edit"
+          userId={id}
+          canAssignOwner={session.role === "owner"}
+          isSelf={id === session.user.id}
+          readOnly={profile.role === "owner" && session.role !== "owner"}
+          defaultValues={{
+            firstName: profile.first_name,
+            lastName: profile.last_name ?? "",
+            email: profile.email,
+            phone: profile.phone ?? "",
+            password: "",
+            role: profile.role,
+            isActive: profile.is_active,
+            permissions: toModulePermissions(permissionsResult.data),
+          }}
+        />
+      </FreshForm>
     </>
   )
 }
