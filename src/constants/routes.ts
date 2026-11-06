@@ -14,6 +14,7 @@ export const ROUTES = {
   itemsExport: "/items/export",
   priceLists: "/price-lists",
   priceListsAdd: "/price-lists/add",
+  inventory: "/inventory",
   inventoryAdjustments: "/inventory/adjustments",
   inventoryAdjustmentsAdd: "/inventory/adjustments/add",
   customers: "/customers",
@@ -30,6 +31,7 @@ export const ROUTES = {
   reports: "/reports",
   users: "/users",
   usersAdd: "/users/add",
+  company: "/settings/company",
   taxes: "/settings/taxes",
   taxesAdd: "/settings/taxes/add",
   directTaxes: "/settings/direct-taxes",
@@ -86,11 +88,17 @@ export function customerRoute(id: string) {
   return `${ROUTES.customers}/${id}`
 }
 
+// Items open beside the stock list on /inventory, like on /items.
+export function inventoryItemRoute(id: string) {
+  return `${ROUTES.inventory}?${ITEM_PARAM}=${id}`
+}
+
 export function inventoryAdjustmentRoute(id: string) {
   return `${ROUTES.inventoryAdjustments}/${id}`
 }
 
-// A new adjustment that starts with this item in its table (Adjust Stock on an item).
+// A new adjustment that starts with this item in its table. Not used for now: Adjust Stock
+// opens an empty adjustment.
 export function newAdjustmentForItemRoute(itemId: string) {
   return `${ROUTES.inventoryAdjustmentsAdd}?${ITEM_PARAM}=${itemId}`
 }

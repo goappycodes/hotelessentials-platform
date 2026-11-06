@@ -237,7 +237,6 @@ export function AdjustmentForm(props: AdjustmentFormProps) {
                 name="reason"
                 label="Reason"
                 orientation="horizontal"
-                required
                 placeholder="Select a reason"
                 searchPlaceholder="Search or type a reason"
                 options={reasonOptions}

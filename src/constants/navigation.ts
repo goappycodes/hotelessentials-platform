@@ -1,5 +1,6 @@
 import {
   BadgePercent,
+  Building2,
   ChartColumn,
   ClipboardList,
   Contact,
@@ -61,6 +62,18 @@ export const MODULE_NAV_ITEMS = {
     create: { href: ROUTES.priceListsAdd, title: "New Price List" },
     access: "price_lists",
     search: { placeholder: "Search price lists", scope: "price_lists" },
+  },
+  inventory: {
+    title: "Stock Levels",
+    href: ROUTES.inventory,
+    icon: Warehouse,
+    description: "Stock in the warehouse, what confirmed orders need and what is left.",
+    // Inventory permissions are the Inventory Adjustments module's.
+    access: "inventory_adjustments",
+    search: {
+      placeholder: "Search stock by item name or SKU",
+      scope: "inventory",
+    },
   },
   inventoryAdjustments: {
     title: "Inventory Adjustments",
@@ -133,6 +146,13 @@ export const MODULE_NAV_ITEMS = {
       scope: "users",
     },
   },
+  company: {
+    title: "Company Details",
+    href: ROUTES.company,
+    icon: Building2,
+    description: "Your logo, address and bank details on quotations and sales orders.",
+    access: "admin",
+  },
   taxes: {
     title: "Taxes",
     href: ROUTES.taxes,
@@ -170,12 +190,11 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
     icon: Package,
     items: [MODULE_NAV_ITEMS.items, MODULE_NAV_ITEMS.priceLists],
   },
-  // Inventory is switched off for now; uncomment to show it in the sidebar again.
-  // {
-  //   title: "Inventory",
-  //   icon: Warehouse,
-  //   items: [MODULE_NAV_ITEMS.inventoryAdjustments],
-  // },
+  {
+    title: "Inventory",
+    icon: Warehouse,
+    items: [MODULE_NAV_ITEMS.inventory, MODULE_NAV_ITEMS.inventoryAdjustments],
+  },
   {
     title: "Sales",
     icon: ShoppingCart,
@@ -193,7 +212,7 @@ export const SIDEBAR_NAV: SidebarNavEntry[] = [
     // Users and Direct Taxes (TDS / TCS) are hidden for now. To show them again, add them
     // back here, and delete src/app/(dashboard)/users/layout.tsx for Users:
     // items: [MODULE_NAV_ITEMS.users, MODULE_NAV_ITEMS.taxes, MODULE_NAV_ITEMS.directTaxes],
-    items: [MODULE_NAV_ITEMS.taxes],
+    items: [MODULE_NAV_ITEMS.company, MODULE_NAV_ITEMS.taxes],
   },
 ];
 
@@ -204,3 +223,18 @@ export const NAV_ITEMS: (NavItem & { group?: string })[] = SIDEBAR_NAV.flatMap(
       ? entry.items.map((item) => ({ ...item, group: entry.title }))
       : [entry],
 );
+
+function isWithin(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+// Whether a page belongs to this link. The most specific link wins: on
+// /inventory/adjustments only Inventory Adjustments is active, not Stock Levels (/inventory).
+export function isActivePath(pathname: string, href: string) {
+  return (
+    isWithin(pathname, href) &&
+    !NAV_ITEMS.some(
+      (item) => item.href.length > href.length && isWithin(pathname, item.href),
+    )
+  );
+}

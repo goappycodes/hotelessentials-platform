@@ -8,7 +8,7 @@ import {
   SALES_ACCOUNTS,
   TAX_PREFERENCES,
 } from "@/constants/items"
-import { MONEY_PATTERN, MONEY_PATTERN_MESSAGE } from "@/lib/format"
+import { MONEY_PATTERN, MONEY_PATTERN_MESSAGE, QUANTITY_PATTERN } from "@/lib/format"
 
 const optionalText = (max: number, label: string) =>
   z.string().trim().max(max, `${label} must be at most ${max} characters`)
@@ -19,6 +19,13 @@ const price = z
   .trim()
   .refine((value) => value === "" || MONEY_PATTERN.test(value), {
     message: MONEY_PATTERN_MESSAGE,
+  })
+
+const optionalQuantity = z
+  .string()
+  .trim()
+  .refine((value) => value === "" || QUANTITY_PATTERN.test(value), {
+    message: "Enter a quantity like 10 or 2.5 (up to 4 decimals)",
   })
 
 const optionalId = z.union([z.uuid(), z.literal("")])
@@ -49,6 +56,7 @@ export const itemSchema = z
     trackInventory: z.boolean(),
     inventoryAccount: z.enum(INVENTORY_ACCOUNTS),
     inventoryValuationMethod: z.enum(INVENTORY_VALUATION_METHODS),
+    reorderLevel: optionalQuantity,
     isActive: z.boolean(),
   })
   .superRefine((item, context) => {

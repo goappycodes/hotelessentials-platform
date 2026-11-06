@@ -40,6 +40,7 @@ import {
 import {
   DASHBOARD_NAV_ITEM,
   SIDEBAR_NAV,
+  isActivePath,
   isNavGroup,
   type NavGroup,
   type NavItem,
@@ -57,10 +58,6 @@ const RAIL_ITEM_CLASS =
 
 const QUICK_CREATE_ACTION_CLASS =
   "top-1.5 md:opacity-0 group-focus-within/menu-sub-item:opacity-100 group-hover/menu-sub-item:opacity-100 peer-data-[active=true]/menu-sub-button:text-sidebar-primary-foreground peer-data-[active=true]/menu-sub-button:opacity-100 peer-data-[active=true]/menu-sub-button:hover:bg-sidebar-primary-foreground/20 peer-data-[active=true]/menu-sub-button:hover:text-sidebar-primary-foreground"
-
-function isActivePath(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`)
-}
 
 // Hides what the user cannot open, and the quick-create "+" where they cannot create.
 function filterNav(access: UserAccess): SidebarNavEntry[] {

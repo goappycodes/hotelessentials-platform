@@ -1,8 +1,6 @@
 "use client"
 
 import { Lock, PackageX /* , Receipt (Transactions tab) */ } from "lucide-react"
-// Inventory is switched off for now; these imports come back with the stock sections.
-// import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 
 import type { ItemDetailData /* , ItemStockHistoryEntry */ } from "@/actions/items"
@@ -33,15 +31,15 @@ import { ItemDetailActions } from "@/features/items/components/item-detail-actio
 import { ItemImagesGallery } from "@/features/items/components/item-images-gallery"
 import { invalidateItemDetail, loadItemDetail } from "@/features/items/item-detail-cache"
 import { formatTaxName } from "@/features/taxes/tax-rates"
-// Inventory is switched off for now; the commented names come back with the stock sections.
-// import { inventoryAdjustmentRoute, newAdjustmentForItemRoute } from "@/constants/routes"
+// inventoryAdjustmentRoute comes back with the hidden History tab.
+import { ROUTES /* , inventoryAdjustmentRoute */ } from "@/constants/routes"
 import {
   formatCurrency,
-  // formatDay,
-  // formatQuantity,
-  // formatSignedQuantity,
+  // formatDay, // for the hidden History tab
+  formatQuantity,
+  // formatSignedQuantity, // for the hidden History tab
 } from "@/lib/format"
-// import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 // For the hidden History tab.
 // const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
@@ -111,8 +109,7 @@ export function ItemPanel({
     )
   }
 
-  // stock is used by the inventory sections, switched off for now.
-  const { item, hsnCode, intraTax, interTax, images, /* stock, */ can } = loaded.data
+  const { item, hsnCode, intraTax, interTax, images, stock, can } = loaded.data
   const isTaxable = item.tax_preference === "Taxable"
 
   return (
@@ -131,23 +128,20 @@ export function ItemPanel({
           isActive={item.is_active}
           isLocked={item.is_locked}
           can={can}
-          // Inventory is switched off for now, so Adjust Stock is hidden (null). To show it
-          // again, use the commented-out value below instead.
-          adjustStock={null}
-          // adjustStock={
-          //   !can.adjustStock
-          //     ? null
-          //     : stock && item.is_active
-          //       ? { href: newAdjustmentForItemRoute(item.id) }
-          //       : {
-          //           blockedReason:
-          //             item.type === "Service"
-          //               ? "Services don't have stock."
-          //               : !stock
-          //                 ? "Edit the item and tick Track Inventory to adjust its stock."
-          //                 : "Mark the item as active to adjust its stock.",
-          //         }
-          // }
+          adjustStock={
+            !can.adjustStock
+              ? null
+              : stock && item.is_active
+                ? { href: ROUTES.inventoryAdjustmentsAdd }
+                : {
+                    blockedReason:
+                      item.type === "Service"
+                        ? "Services don't have stock."
+                        : !stock
+                          ? "Edit the item and tick Track Inventory to adjust its stock."
+                          : "Mark the item as active to adjust its stock.",
+                  }
+          }
           onChanged={reload}
           onDeleted={() => {
             onListChange()
@@ -221,22 +215,25 @@ export function ItemPanel({
                   <p className="text-sm text-muted-foreground">This item isn&apos;t sold.</p>
                 )}
               </DetailSection>
-              {/* Inventory is switched off for now; uncomment when it opens again.
               {stock && (
                 <DetailSection title="Inventory Information">
                   <DetailList
                     rows={[
-                      ["Inventory Account", item.inventory_account],
-                      ["Inventory Valuation Method", item.inventory_valuation_method],
+                      // Hidden for now, like on the item form:
+                      // ["Inventory Account", item.inventory_account],
+                      // ["Inventory Valuation Method", item.inventory_valuation_method],
+                      [
+                        "Reorder Level",
+                        item.reorder_level !== null &&
+                          formatQuantity(item.reorder_level, item.unit),
+                      ],
                     ]}
                   />
                 </DetailSection>
               )}
-              */}
             </div>
             <div className="flex flex-col gap-6">
               <ItemImagesGallery key={item.id} images={images} />
-              {/* Inventory is switched off for now; uncomment when it opens again.
               {stock && (
                 <section aria-label="Stock" className="flex flex-col gap-3 rounded-xl border p-4">
                   <h2 className="font-medium">Stock</h2>
@@ -253,7 +250,6 @@ export function ItemPanel({
                   </dl>
                 </section>
               )}
-              */}
             </div>
           </div>
         </TabsContent>
@@ -370,7 +366,7 @@ function StockHistory({
 }
 */
 
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+export function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-base font-medium">{title}</h2>
@@ -380,7 +376,7 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 }
 
 // Label / value rows, like Zoho's item overview. Empty values show as a dash.
-function DetailList({
+export function DetailList({
   rows,
 }: {
   rows: readonly (readonly [string, string | null | undefined | false])[]
@@ -408,7 +404,7 @@ export function ItemPanelSkeleton({ title }: { title?: string }) {
           <Skeleton className="h-6 w-64 flex-1" />
         )}
         <Skeleton className="size-7" />
-        {/* Adjust Stock, hidden for now. <Skeleton className="h-7 w-24" /> */}
+        <Skeleton className="h-7 w-24" />
         <Skeleton className="h-7 w-16" />
       </div>
       <div className="flex h-11 items-center gap-4 border-b px-6">

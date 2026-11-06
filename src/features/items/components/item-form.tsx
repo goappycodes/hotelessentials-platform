@@ -80,6 +80,7 @@ export const NEW_ITEM: ItemInput = {
   trackInventory: false,
   inventoryAccount: "Inventory Asset",
   inventoryValuationMethod: "FIFO (First In, First Out)",
+  reorderLevel: "",
   isActive: true,
 }
 
@@ -136,8 +137,7 @@ export function ItemForm(props: ItemFormProps) {
     intraStateTaxId,
     interStateTaxId,
     unit,
-    // Inventory is switched off for now; uncomment with the inventory fields below.
-    // trackInventory,
+    trackInventory,
   ] = useWatch({
     control: form.control,
     name: [
@@ -148,7 +148,7 @@ export function ItemForm(props: ItemFormProps) {
       "intraStateTaxId",
       "interStateTaxId",
       "unit",
-      // "trackInventory",
+      "trackInventory",
     ],
   })
   // Common units, plus a custom one the user typed.
@@ -466,12 +466,24 @@ export function ItemForm(props: ItemFormProps) {
                 name="trackInventory"
                 label="Track Inventory for this item"
                 hint="Keep a running count of stock for this item."
-                // Inventory is switched off for now; uncomment when it opens again.
-                // description="You cannot enable/disable inventory tracking once you've created transactions for this item"
+                description="You cannot enable/disable inventory tracking once you've created transactions for this item"
                 disabled={readOnly || isPending || hasStockHistory}
               />
-              {/* Inventory is switched off for now; uncomment when it opens again (also
-                  trackInventory in useWatch and the INVENTORY_* imports above).
+              {trackInventory && (
+                <div className="grid gap-x-10 gap-y-4 lg:grid-cols-2">
+                  <FormInputField
+                    control={form.control}
+                    name="reorderLevel"
+                    label="Reorder Level"
+                    orientation="horizontal"
+                    hint="The item shows as Low Stock once its available stock reaches this."
+                    inputMode="decimal"
+                    disabled={readOnly || isPending}
+                  />
+                </div>
+              )}
+              {/* Inventory Account and Valuation Method are hidden for now: nothing uses them
+                  yet. Uncomment with the INVENTORY_* imports above to show them.
               {trackInventory && (
                 <div className="grid gap-x-10 gap-y-4 lg:grid-cols-2">
                   <FormComboboxField

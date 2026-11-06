@@ -25,6 +25,7 @@ export function toItemInput(item: Tables<"items">): ItemInput {
     trackInventory: item.track_inventory,
     inventoryAccount: item.inventory_account as ItemInput["inventoryAccount"],
     inventoryValuationMethod: item.inventory_valuation_method,
+    reorderLevel: item.reorder_level === null ? "" : String(item.reorder_level),
     isActive: item.is_active,
   }
 }

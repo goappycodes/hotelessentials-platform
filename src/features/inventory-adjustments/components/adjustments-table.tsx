@@ -126,7 +126,7 @@ export async function AdjustmentsTable({
                       {formatDay(adjustment.adjustment_date)}
                     </Link>
                   </TableCell>
-                  <TableCell className="px-4">{adjustment.reason}</TableCell>
+                  <TableCell className="px-4">{adjustment.reason ?? "—"}</TableCell>
                   <TableCell className="max-w-64 truncate px-4 text-muted-foreground">
                     {adjustment.description ?? "—"}
                   </TableCell>

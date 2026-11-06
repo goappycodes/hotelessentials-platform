@@ -104,7 +104,7 @@ async function AdjustmentDetails({
     account:
       ADJUSTMENT_ACCOUNTS.find((account) => account === adjustment.account) ??
       "Cost of Goods Sold",
-    reason: adjustment.reason,
+    reason: adjustment.reason ?? "",
     description: adjustment.description ?? "",
     items: linesResult.data.map((line) => ({
       itemId: line.item_id,
@@ -121,7 +121,7 @@ async function AdjustmentDetails({
     <>
       <PageHeader
         title={title}
-        description={`${adjustment.reason} · ${adjustment.mode}`}
+        description={[adjustment.reason, adjustment.mode].filter(Boolean).join(" · ")}
         breadcrumbs={breadcrumbs(title)}
         actions={
           <div className="flex items-center gap-3">

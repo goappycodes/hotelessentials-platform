@@ -1,7 +1,7 @@
 import type { AppModule } from "@/constants/permissions"
 
 // Modules the header search can look inside. Reports has no records of its own.
-export type SearchScope = "users" | Exclude<AppModule, "reports">
+export type SearchScope = "users" | "inventory" | Exclude<AppModule, "reports">
 
 // One suggestion in the header search dropdown.
 export type SearchResult = {

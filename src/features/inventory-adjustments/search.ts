@@ -29,7 +29,7 @@ export async function searchInventoryAdjustments(
   return data.map((adjustment) => ({
     id: adjustment.id,
     href: inventoryAdjustmentRoute(adjustment.id),
-    title: adjustment.reason,
+    title: adjustment.reason ?? "Inventory adjustment",
     details: [
       { value: formatDay(adjustment.adjustment_date) },
       ...(adjustment.reference_number

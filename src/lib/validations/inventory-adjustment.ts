@@ -25,11 +25,7 @@ export const inventoryAdjustmentSchema = z
     referenceNumber: optionalText(50, "Reference number"),
     date: z.iso.date("Pick a date"),
     account: z.enum(ADJUSTMENT_ACCOUNTS),
-    reason: z
-      .string()
-      .trim()
-      .min(1, "Pick or type a reason")
-      .max(100, "Reason must be at most 100 characters"),
+    reason: optionalText(100, "Reason"),
     description: optionalText(500, "Description"),
     items: z.array(adjustmentLineSchema).max(MAX_ADJUSTMENT_ITEMS),
   })

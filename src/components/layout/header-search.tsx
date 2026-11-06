@@ -14,7 +14,7 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { Spinner } from "@/components/ui/spinner"
 import { LIST_SEARCH_PARAMS } from "@/constants/list"
-import { NAV_ITEMS, type NavItem } from "@/constants/navigation"
+import { NAV_ITEMS, isActivePath, type NavItem } from "@/constants/navigation"
 import { useUpdateSearchParams } from "@/hooks/use-list-query"
 import { cn } from "@/lib/utils"
 import type { SearchResult } from "@/types/search"
@@ -45,8 +45,7 @@ export function HeaderSearch() {
   const inputRef = useRef<HTMLInputElement>(null)
   const currentModule = NAV_ITEMS.find(
     (item): item is ModuleWithSearch =>
-      Boolean(item.search) &&
-      (pathname === item.href || pathname.startsWith(`${item.href}/`))
+      Boolean(item.search) && isActivePath(pathname, item.href)
   )
 
   useEffect(() => {

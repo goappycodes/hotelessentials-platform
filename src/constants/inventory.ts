@@ -28,5 +28,9 @@ export const ADJUSTMENT_REASONS = [
   "Inventory revaluation",
 ]
 
+// Worked out by the inventory_list view from available stock and the reorder level.
+export const STOCK_STATUSES = ["In Stock", "Low Stock", "Out of Stock"] as const
+export type StockStatus = (typeof STOCK_STATUSES)[number]
+
 // Items an adjustment can hold.
 export const MAX_ADJUSTMENT_ITEMS = 100

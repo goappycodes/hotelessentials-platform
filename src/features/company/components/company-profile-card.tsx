@@ -12,15 +12,16 @@ import { FormTextareaField } from "@/components/shared/form-textarea-field"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FieldGroup } from "@/components/ui/field"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { CompanyImageField } from "@/features/taxes/components/company-image-field"
+import { CompanyImageField } from "@/features/company/components/company-image-field"
 import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import {
   companyProfileSchema,
   type CompanyProfileInput,
 } from "@/lib/validations/company-profile"
 
-// Settings → Taxes: the business's own details, printed at the top (name, address,
+// Settings → Company Details: the business's own details, printed at the top (name, address,
 // phone, email, GSTIN) and bottom (bank details) of quotations.
 export function CompanyProfileCard({
   defaultValues,
@@ -159,6 +160,32 @@ export function CompanyProfileCard({
             </FieldGroup>
           </fieldset>
         </form>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function CompanyProfileCardSkeleton() {
+  return (
+    <Card aria-busy="true">
+      <span className="sr-only">Loading…</span>
+      <CardHeader>
+        <Skeleton className="h-5 w-56" />
+        <Skeleton className="h-4 w-80" />
+      </CardHeader>
+      <CardContent className="flex flex-col gap-6">
+        <div className="grid max-w-3xl gap-6 sm:grid-cols-2">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+        </div>
+        <div className="flex max-w-3xl flex-col gap-4">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div key={index} className="flex items-center gap-4">
+              <Skeleton className="h-4 w-32 shrink-0" />
+              <Skeleton className="h-9 flex-1" />
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   )

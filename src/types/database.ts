@@ -437,7 +437,7 @@ export type Database = {
           reference_number: string | null
           adjustment_date: string
           account: string
-          reason: string
+          reason: string | null
           description: string | null
           status: Database["public"]["Enums"]["adjustment_status"]
           created_by: string | null
@@ -450,7 +450,7 @@ export type Database = {
           reference_number?: string | null
           adjustment_date?: string
           account?: string
-          reason: string
+          reason?: string | null
           description?: string | null
           status?: Database["public"]["Enums"]["adjustment_status"]
           created_by?: string | null
@@ -463,7 +463,7 @@ export type Database = {
           reference_number?: string | null
           adjustment_date?: string
           account?: string
-          reason?: string
+          reason?: string | null
           description?: string | null
           status?: Database["public"]["Enums"]["adjustment_status"]
           created_by?: string | null
@@ -592,6 +592,7 @@ export type Database = {
           track_inventory: boolean
           inventory_account: string
           inventory_valuation_method: Database["public"]["Enums"]["inventory_valuation_method"]
+          reorder_level: number | null
           // The item's ID in the system it was imported from (Zoho "Item ID").
           external_id: string | null
           is_locked: boolean
@@ -621,6 +622,7 @@ export type Database = {
           track_inventory?: boolean
           inventory_account?: string
           inventory_valuation_method?: Database["public"]["Enums"]["inventory_valuation_method"]
+          reorder_level?: number | null
           external_id?: string | null
           is_locked?: boolean
           is_active?: boolean
@@ -649,6 +651,7 @@ export type Database = {
           track_inventory?: boolean
           inventory_account?: string
           inventory_valuation_method?: Database["public"]["Enums"]["inventory_valuation_method"]
+          reorder_level?: number | null
           external_id?: string | null
           is_locked?: boolean
           is_active?: boolean
@@ -888,6 +891,23 @@ export type Database = {
       }
     }
     Views: {
+      // Stock of active items that track inventory (security_invoker view).
+      inventory_list: {
+        Row: {
+          id: string
+          name: string
+          sku: string | null
+          unit: string | null
+          current_stock: number
+          reserved_stock: number
+          available_stock: number
+          ordered_quantity: number
+          incoming_stock: number
+          reorder_level: number | null
+          stock_status: "In Stock" | "Low Stock" | "Out of Stock"
+        }
+        Relationships: []
+      }
       // Items plus their HSN code, for lists and search (security_invoker view).
       item_list: {
         // stock_on_hand is null for items that don't track inventory.

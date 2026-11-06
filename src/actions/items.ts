@@ -62,6 +62,7 @@ function toItemRow(item: ItemInput) {
     track_inventory: item.type === "Goods" && item.trackInventory,
     inventory_account: item.inventoryAccount,
     inventory_valuation_method: item.inventoryValuationMethod,
+    reorder_level: item.reorderLevel === "" ? null : Number(item.reorderLevel),
     is_active: item.isActive,
   }
 }
@@ -342,7 +343,7 @@ export async function deleteItems(itemIds: string[]): Promise<ActionResult<BulkI
 export type ItemStockHistoryEntry = {
   adjustmentId: string
   date: string
-  reason: string
+  reason: string | null
   referenceNumber: string | null
   quantityAdjusted: number
 }
