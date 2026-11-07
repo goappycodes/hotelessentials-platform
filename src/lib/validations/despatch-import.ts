@@ -10,6 +10,8 @@ const importLineSchema = z.object({
   row: z.number().int().positive(),
   name: z.string().min(1).max(200),
   sku: optionalText(50),
+  // Blank only on despatches from before boxes, which are already imported.
+  boxNumber: z.string().min(1).max(20).nullable(),
   quantity: z.number().positive(),
 })
 

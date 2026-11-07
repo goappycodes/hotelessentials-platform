@@ -62,22 +62,31 @@ export async function importDespatches(
       const fail = (message: string, row = despatch.row) =>
         result.failed.push({ row, name: despatch.despatchNumber, message })
 
+      const noBox = despatch.lines.find((line) => !line.boxNumber)
+      if (noBox) {
+        fail("Box Number is blank", noBox.row)
+        continue
+      }
+
       const order = orders.get(despatch.soNumber)
       if (!order) {
         fail(`Sales order "${despatch.soNumber}" isn't in Sales Orders`)
         continue
       }
 
-      // Each file line takes one order line, by SKU or else by name.
+      // Each file line takes an order line, by SKU or else by name. An order line can fill
+      // several boxes, but only once in each.
       const used = new Set<string>()
-      const items: { sales_order_item_id: string; quantity: number }[] = []
+      const free = (id: string, box: string) => !used.has(`${id}:${box.toLowerCase()}`)
+      const items: { sales_order_item_id: string; box_number: string; quantity: number }[] = []
       const missing = despatch.lines.find((line) => {
+        const box = line.boxNumber ?? ""
         const match =
-          order.lines.find((entry) => !used.has(entry.id) && matches(entry.item?.sku, line.sku)) ??
-          order.lines.find((entry) => !used.has(entry.id) && matches(entry.name, line.name))
+          order.lines.find((entry) => free(entry.id, box) && matches(entry.item?.sku, line.sku)) ??
+          order.lines.find((entry) => free(entry.id, box) && matches(entry.name, line.name))
         if (!match) return true
-        used.add(match.id)
-        items.push({ sales_order_item_id: match.id, quantity: line.quantity })
+        used.add(`${match.id}:${box.toLowerCase()}`)
+        items.push({ sales_order_item_id: match.id, box_number: box, quantity: line.quantity })
         return false
       })
       if (missing) {
@@ -100,7 +109,7 @@ export async function importDespatches(
       })
 
       if (!error) result.created += 1
-      else if (error.code === "23505") result.skipped += 1
+      else if (error.code === "23505" && error.message.includes("despatch_number")) result.skipped += 1
       else fail(getDespatchErrorMessage(error))
     }
   } catch (error) {

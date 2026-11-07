@@ -1,15 +1,20 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { PackagePlus, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useFieldArray, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import { saveDespatch } from "@/actions/despatch"
 import { FormError } from "@/components/shared/form-error"
-import { FormFieldLabel, HORIZONTAL_FIELD_CLASS } from "@/components/shared/form-field-label"
+import {
+  FieldHint,
+  FormFieldLabel,
+  HORIZONTAL_FIELD_CLASS,
+} from "@/components/shared/form-field-label"
 import { FormInputField } from "@/components/shared/form-input-field"
 import { FormTextareaField } from "@/components/shared/form-textarea-field"
 import { Button } from "@/components/ui/button"
@@ -26,6 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { DESPATCH_HINTS } from "@/constants/despatch"
 import { ROUTES, despatchRoute } from "@/constants/routes"
 import { DespatchOrderPicker } from "@/features/despatch/components/despatch-order-picker"
 import type { DespatchOrder, DespatchOrderOption } from "@/features/despatch/queries"
@@ -38,9 +45,42 @@ const HEAD_CLASS = "h-9 px-3 text-xs font-medium tracking-wide text-muted-foregr
 
 type SaveStatus = "Packed" | "Despatched"
 
-// A new despatch: pick a confirmed order, then how much of each item goes this time. Each
-// line starts at everything left, so a full despatch needs no typing; lower it, or clear
-// it, to send part of the order now and the rest later.
+function HeadWithHint({
+  label,
+  hint,
+  className,
+}: {
+  label: string
+  hint: string
+  className?: string
+}) {
+  return (
+    <TableHead className={cn(HEAD_CLASS, className)}>
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <FieldHint label={label} hint={hint} />
+      </span>
+    </TableHead>
+  )
+}
+
+// A button with a short tooltip. The span keeps the tooltip working while it's disabled.
+function ButtonHint({ hint, children }: { hint: string; children: React.ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="inline-flex">
+          {children}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-60">{hint}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+// A new despatch: pick a confirmed order, then which box each item goes in and how many.
+// Each item starts with everything left in one box; lower or clear it to send part of the
+// order now and the rest later, or add a box to split the item.
 export function DespatchForm({
   options,
   order,
@@ -56,7 +96,7 @@ export function DespatchForm({
       <Card className="gap-0 py-0">
         <FieldGroup className="max-w-[34rem] p-6">
           <Field className={HORIZONTAL_FIELD_CLASS}>
-            <FormFieldLabel label="Sales Order" required />
+            <FormFieldLabel label="Sales Order" required hint={DESPATCH_HINTS.salesOrder} />
             <DespatchOrderPicker options={options} selected={order ?? undefined} />
           </Field>
         </FieldGroup>
@@ -92,10 +132,12 @@ function DespatchItemsForm({ order, today }: { order: DespatchOrder; today: stri
       notes: "",
       lines: order.lines.map((line) => ({
         salesOrderItemId: line.id,
+        boxNumber: "",
         quantity: line.remaining > 0 ? toMoneyInput(line.remaining) : "",
       })),
     },
   })
+  const { fields, insert, remove } = useFieldArray({ control: form.control, name: "lines" })
   const { errors } = form.formState
   const linesError = errors.lines?.root ?? errors.lines
   const nothingLeft = order.lines.every((line) => line.remaining === 0)
@@ -128,6 +170,7 @@ function DespatchItemsForm({ order, today }: { order: DespatchOrder; today: stri
               name="date"
               label="Despatch Date"
               orientation="horizontal"
+              hint={DESPATCH_HINTS.date}
               required
               type="date"
             />
@@ -136,6 +179,7 @@ function DespatchItemsForm({ order, today }: { order: DespatchOrder; today: stri
               name="transporter"
               label="Transporter"
               orientation="horizontal"
+              hint={DESPATCH_HINTS.transporter}
               autoComplete="off"
             />
             <FormInputField
@@ -143,6 +187,7 @@ function DespatchItemsForm({ order, today }: { order: DespatchOrder; today: stri
               name="trackingNumber"
               label="LR / Tracking Number"
               orientation="horizontal"
+              hint={DESPATCH_HINTS.trackingNumber}
               autoComplete="off"
             />
             <FormInputField
@@ -150,6 +195,7 @@ function DespatchItemsForm({ order, today }: { order: DespatchOrder; today: stri
               name="vehicleNumber"
               label="Vehicle Number"
               orientation="horizontal"
+              hint={DESPATCH_HINTS.vehicleNumber}
               autoComplete="off"
             />
             <FormTextareaField
@@ -157,6 +203,7 @@ function DespatchItemsForm({ order, today }: { order: DespatchOrder; today: stri
               name="notes"
               label="Notes"
               orientation="horizontal"
+              hint={DESPATCH_HINTS.notes}
               placeholder="Max. 500 characters"
               rows={3}
             />
@@ -170,46 +217,126 @@ function DespatchItemsForm({ order, today }: { order: DespatchOrder; today: stri
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className={HEAD_CLASS}>Item Details</TableHead>
                     <TableHead className={cn(HEAD_CLASS, "w-28 text-right")}>Ordered</TableHead>
-                    <TableHead className={cn(HEAD_CLASS, "w-28 text-right")}>Packed / Sent</TableHead>
-                    <TableHead className={cn(HEAD_CLASS, "w-28 text-right")}>In Stock</TableHead>
-                    <TableHead className={cn(HEAD_CLASS, "w-36 text-right")}>This Despatch</TableHead>
+                    <HeadWithHint
+                      label="Packed / Sent"
+                      hint={DESPATCH_HINTS.packedSent}
+                      className="w-32 text-right"
+                    />
+                    <HeadWithHint
+                      label="In Stock"
+                      hint={DESPATCH_HINTS.inStock}
+                      className="w-28 text-right"
+                    />
+                    <HeadWithHint
+                      label="Box No"
+                      hint={DESPATCH_HINTS.boxNumber}
+                      className="w-32"
+                    />
+                    <HeadWithHint
+                      label="Qty in Box"
+                      hint={DESPATCH_HINTS.boxQuantity}
+                      className="w-32 text-right"
+                    />
+                    <TableHead className="w-20" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {order.lines.map((line, index) => {
+                  {fields.map((field, index) => {
+                    const line = order.lines.find((entry) => entry.id === field.salesOrderItemId)
+                    if (!line) return null
+                    // The item's details show once, on its first box.
+                    const isFirstBox = fields[index - 1]?.salesOrderItemId !== line.id
+                    const isLastBox = fields[index + 1]?.salesOrderItemId !== line.id
+                    const boxError = errors.lines?.[index]?.boxNumber
                     const quantityError = errors.lines?.[index]?.quantity
+                    const disabled = isPending || line.remaining === 0
                     return (
-                      <TableRow key={line.id} className="align-top hover:bg-transparent">
+                      <TableRow key={field.id} className="align-top hover:bg-transparent">
                         <TableCell className="px-3 py-2">
-                          <span className="block font-medium whitespace-normal">{line.name}</span>
-                          {line.sku && (
-                            <span className="block text-xs text-muted-foreground">
-                              SKU: {line.sku}
-                            </span>
+                          {isFirstBox && (
+                            <>
+                              <span className="block font-medium whitespace-normal">{line.name}</span>
+                              {line.sku && (
+                                <span className="block text-xs text-muted-foreground">
+                                  SKU: {line.sku}
+                                </span>
+                              )}
+                            </>
                           )}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right tabular-nums">
-                          {formatQuantity(line.quantity, line.unit)}
+                          {isFirstBox && formatQuantity(line.quantity, line.unit)}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right tabular-nums">
-                          {formatQuantity(line.taken, line.unit)}
+                          {isFirstBox && formatQuantity(line.taken, line.unit)}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right tabular-nums">
-                          {line.stock === null ? "—" : formatQuantity(line.stock, line.unit)}
+                          {isFirstBox &&
+                            (line.stock === null ? "—" : formatQuantity(line.stock, line.unit))}
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
+                          <Input
+                            aria-label={`Box number, ${line.name}`}
+                            aria-invalid={Boolean(boxError)}
+                            placeholder="Box No"
+                            maxLength={20}
+                            autoComplete="off"
+                            disabled={disabled}
+                            {...form.register(`lines.${index}.boxNumber`)}
+                          />
+                          {boxError && <FieldError className="mt-1" errors={[boxError]} />}
                         </TableCell>
                         <TableCell className="px-3 py-2">
                           <Input
                             inputMode="decimal"
-                            aria-label={`This despatch, ${line.name}`}
+                            aria-label={`Quantity in box, ${line.name}`}
                             aria-invalid={Boolean(quantityError)}
                             placeholder="0"
-                            disabled={isPending || line.remaining === 0}
+                            disabled={disabled}
                             className="text-right tabular-nums"
                             {...form.register(`lines.${index}.quantity`)}
                           />
                           {quantityError && (
                             <FieldError className="mt-1 text-right" errors={[quantityError]} />
                           )}
+                        </TableCell>
+                        <TableCell className="px-1 py-2">
+                          <div className="flex justify-end">
+                            {isLastBox && (
+                              <ButtonHint hint={DESPATCH_HINTS.addBox}>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={`Add another box for ${line.name}`}
+                                  disabled={disabled}
+                                  onClick={() =>
+                                    insert(index + 1, {
+                                      salesOrderItemId: line.id,
+                                      boxNumber: "",
+                                      quantity: "",
+                                    })
+                                  }
+                                >
+                                  <PackagePlus />
+                                </Button>
+                              </ButtonHint>
+                            )}
+                            {!(isFirstBox && isLastBox) && (
+                              <ButtonHint hint={DESPATCH_HINTS.removeBox}>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={`Remove this box for ${line.name}`}
+                                  disabled={disabled}
+                                  onClick={() => remove(index)}
+                                >
+                                  <X />
+                                </Button>
+                              </ButtonHint>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -231,19 +358,23 @@ function DespatchItemsForm({ order, today }: { order: DespatchOrder; today: stri
         <Button asChild variant="outline">
           <Link href={ROUTES.despatch}>Cancel</Link>
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isPending || nothingLeft}
-          onClick={save("Packed")}
-        >
-          {isPending && savingAs === "Packed" && <Spinner />}
-          Save as Packed
-        </Button>
-        <Button type="button" disabled={isPending || nothingLeft} onClick={save("Despatched")}>
-          {isPending && savingAs === "Despatched" && <Spinner />}
-          Save and Despatch
-        </Button>
+        <ButtonHint hint={DESPATCH_HINTS.savePacked}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending || nothingLeft}
+            onClick={save("Packed")}
+          >
+            {isPending && savingAs === "Packed" && <Spinner />}
+            Save as Packed
+          </Button>
+        </ButtonHint>
+        <ButtonHint hint={DESPATCH_HINTS.saveDespatched}>
+          <Button type="button" disabled={isPending || nothingLeft} onClick={save("Despatched")}>
+            {isPending && savingAs === "Despatched" && <Spinner />}
+            Save and Despatch
+          </Button>
+        </ButtonHint>
       </div>
     </form>
   )

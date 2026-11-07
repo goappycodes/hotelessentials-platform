@@ -319,6 +319,40 @@ export async function setItemsActive(
   }
 }
 
+// Turns on Track Inventory for the selected items, so they show on Stock Levels and can be
+// adjusted. Only goods can track stock. Locked items are left alone, as is anything already
+// tracked. It can be turned off on the item, until it has adjustments.
+export async function trackItemsInventory(
+  itemIds: string[]
+): Promise<ActionResult<BulkItemsResult>> {
+  const ids = itemIdsSchema.safeParse(itemIds)
+  if (!ids.success) return { success: false, error: INVALID_INPUT }
+  if (!(await authorize("edit"))) return { success: false, error: NOT_ALLOWED }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("items")
+    .update({ track_inventory: true })
+    .in("id", ids.data)
+    .eq("type", "Goods")
+    .eq("is_locked", false)
+    .eq("track_inventory", false)
+    .select("id")
+  if (error) return { success: false, error: getDatabaseErrorMessage(error) }
+
+  const skipped = ids.data.length - data.length
+  return {
+    success: true,
+    data: {
+      changed: data.length,
+      skipped,
+      skippedReason: skipped
+        ? "Locked items, services and items already tracked are left as they are."
+        : undefined,
+    },
+  }
+}
+
 // Delete for the selected items, one at a time so an item that can't be deleted (locked,
 // or used in a price list) doesn't stop the others.
 export async function deleteItems(itemIds: string[]): Promise<ActionResult<BulkItemsResult>> {

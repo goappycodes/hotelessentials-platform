@@ -7,6 +7,7 @@ import { toast } from "sonner"
 
 import { deleteSalesOrder, setSalesOrderStatus } from "@/actions/sales-orders"
 import { StatusMessage } from "@/components/shared/status-message"
+import { WhatsNext } from "@/components/shared/whats-next"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -251,6 +252,32 @@ function SalesOrderView({
       </div>
 
       <div className="flex flex-1 flex-col gap-4 bg-muted/40 p-4 sm:p-6">
+        {order.status === "Draft" && canEdit && (
+          <WhatsNext
+            actions={
+              <Button
+                size="sm"
+                disabled={isPending}
+                onClick={() => changeStatus("Confirmed", "Sales order confirmed.")}
+              >
+                Mark As Confirmed
+              </Button>
+            }
+          >
+            Confirm this order so the goods can be packed and sent.
+          </WhatsNext>
+        )}
+        {order.status === "Confirmed" && canCreateDespatch && (
+          <WhatsNext
+            actions={
+              <Button asChild size="sm">
+                <Link href={newDespatchForOrderRoute(order.id)}>Despatch</Link>
+              </Button>
+            }
+          >
+            Pack the goods and send them to the customer.
+          </WhatsNext>
+        )}
         {order.quote_number && (
           <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
             <FileText className="size-4 shrink-0 text-primary" />

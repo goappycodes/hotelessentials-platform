@@ -123,14 +123,18 @@ export async function getStockDetail(itemId: string): Promise<StockDetail | null
         // One line per item in an adjustment.
         quantity: adjustment.lines[0]?.quantity_adjusted ?? 0,
       })),
-      ...despatched.data.map((line) => ({
-        id: line.id,
-        href: canOpenDespatches ? despatchRoute(line.despatch.id) : null,
-        date: line.despatch.despatch_date,
-        reason: `Despatched to ${line.despatch.customer_name}`,
-        referenceNumber: line.despatch.despatch_number,
-        quantity: -line.quantity,
-      })),
+      // One row per despatch, however many boxes the item filled.
+      ...[...Map.groupBy(despatched.data, (line) => line.despatch.id).values()].map((lines) => {
+        const { despatch } = lines[0]
+        return {
+          id: despatch.id,
+          href: canOpenDespatches ? despatchRoute(despatch.id) : null,
+          date: despatch.despatch_date,
+          reason: `Despatched to ${despatch.customer_name}`,
+          referenceNumber: despatch.despatch_number,
+          quantity: -lines.reduce((total, line) => total + line.quantity, 0),
+        }
+      }),
     ].sort((a, b) => b.date.localeCompare(a.date)),
   }
 }

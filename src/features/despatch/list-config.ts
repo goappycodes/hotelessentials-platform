@@ -42,7 +42,13 @@ export const DESPATCH_COLUMNS = [
   "Despatch Number",
   "Sales Order",
   "Customer Name",
+  "Box No",
+  "Sent Items",
+  "Remaining Items",
+  "Total Items",
   "Transporter",
   "Tracking Number",
   "Status",
 ]
+
+export const DESPATCH_QUANTITY_COLUMNS = ["Sent Items", "Remaining Items", "Total Items"]

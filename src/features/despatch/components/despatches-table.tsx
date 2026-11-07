@@ -13,8 +13,9 @@ import {
 import { DespatchStatusBadge } from "@/features/despatch/components/despatch-status-badge"
 import type { DespatchRow } from "@/features/despatch/components/despatch-workspace"
 import { prefetchDespatchDetail } from "@/features/despatch/despatch-detail-cache"
-import { DESPATCH_COLUMNS } from "@/features/despatch/list-config"
-import { formatDay } from "@/lib/format"
+import { DESPATCH_COLUMNS, DESPATCH_QUANTITY_COLUMNS } from "@/features/despatch/list-config"
+import { formatDay, formatQuantity } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 const HEAD_CLASS = "h-10 px-4 text-xs font-medium tracking-wide text-muted-foreground uppercase"
 
@@ -33,7 +34,13 @@ export function DespatchesTable({
       <TableHeader>
         <TableRow className="bg-muted/50 hover:bg-muted/50">
           {DESPATCH_COLUMNS.map((column) => (
-            <TableHead key={column} className={HEAD_CLASS}>
+            <TableHead
+              key={column}
+              className={cn(
+                HEAD_CLASS,
+                DESPATCH_QUANTITY_COLUMNS.includes(column) && "text-right"
+              )}
+            >
               {column}
             </TableHead>
           ))}
@@ -59,6 +66,18 @@ export function DespatchesTable({
             </TableCell>
             <TableCell className="px-4 text-muted-foreground">{despatch.so_number}</TableCell>
             <TableCell className="max-w-64 truncate px-4">{despatch.customer_name}</TableCell>
+            <TableCell className="max-w-32 truncate px-4">
+              {despatch.boxes.join(", ") || "—"}
+            </TableCell>
+            <TableCell className="px-4 text-right tabular-nums">
+              {formatQuantity(despatch.sentItems)}
+            </TableCell>
+            <TableCell className="px-4 text-right tabular-nums">
+              {formatQuantity(despatch.remainingItems)}
+            </TableCell>
+            <TableCell className="px-4 text-right tabular-nums">
+              {formatQuantity(despatch.totalItems)}
+            </TableCell>
             <TableCell className="px-4 text-muted-foreground">
               {despatch.transporter ?? "—"}
             </TableCell>

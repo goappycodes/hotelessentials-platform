@@ -2,13 +2,11 @@
 
 import {
   ChevronDown,
-  ClipboardList,
   Ellipsis,
   FileX,
   Paperclip,
   Pencil,
   Printer,
-  Sparkles,
   Trash2,
   X,
 } from "lucide-react"
@@ -18,6 +16,7 @@ import { toast } from "sonner"
 
 import { deleteQuotation, setQuotationStatus } from "@/actions/quotations"
 import { StatusMessage } from "@/components/shared/status-message"
+import { WhatsNext } from "@/components/shared/whats-next"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -273,32 +272,58 @@ function QuotationView({
 
       <div className="flex flex-1 flex-col gap-4 bg-muted/40 p-4 sm:p-6">
         {quote.status === "Draft" && canEdit && (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
-            <Sparkles className="size-4 text-primary" />
-            <p className="flex-1">
-              <span className="font-semibold">WHAT&apos;S NEXT?</span> Send this quote to your
-              customer, then mark it as sent.
-            </p>
-            <Button
-              size="sm"
-              disabled={isPending}
-              onClick={() => changeStatus("Sent", "Quotation marked as sent.")}
-            >
-              Mark As Sent
-            </Button>
-          </div>
+          <WhatsNext
+            actions={
+              <Button
+                size="sm"
+                disabled={isPending}
+                onClick={() => changeStatus("Sent", "Quotation marked as sent.")}
+              >
+                Mark As Sent
+              </Button>
+            }
+          >
+            Send this quote to your customer, then mark it as sent.
+          </WhatsNext>
+        )}
+        {quote.status === "Sent" && canEdit && (
+          <WhatsNext
+            actions={
+              <>
+                <Button
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() =>
+                    changeStatus("Accepted", "Quotation accepted. Its sales order is in Sales Orders.")
+                  }
+                >
+                  Mark As Accepted
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() => changeStatus("Declined", "Quotation marked as declined.")}
+                >
+                  Mark As Declined
+                </Button>
+              </>
+            }
+          >
+            Has the customer replied? Accepting creates the sales order.
+          </WhatsNext>
         )}
         {salesOrder && (
-          <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
-            <ClipboardList className="size-4 shrink-0 text-primary" />
-            <p>
-              Sales order{" "}
-              <Link href={salesOrderRoute(salesOrder.id)} className="font-medium text-primary hover:underline">
-                {salesOrder.so_number}
-              </Link>{" "}
-              was created from this quotation. Later changes here don&apos;t change the order.
-            </p>
-          </div>
+          <WhatsNext
+            actions={
+              <Button asChild size="sm">
+                <Link href={salesOrderRoute(salesOrder.id)}>View Sales Order</Link>
+              </Button>
+            }
+          >
+            Sales order <span className="font-medium">{salesOrder.so_number}</span> was created from
+            this quotation. Later changes here don&apos;t change the order.
+          </WhatsNext>
         )}
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
           <QuotationDocument data={data} isExpired={isExpired} className="min-w-[595.28pt]" />

@@ -16,6 +16,7 @@ import { toast } from "sonner"
 
 import { deleteDespatch, setDespatchStatus } from "@/actions/despatch"
 import { StatusMessage } from "@/components/shared/status-message"
+import { WhatsNext } from "@/components/shared/whats-next"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -252,6 +253,36 @@ function DespatchView({
       </div>
 
       <div className="flex flex-1 flex-col gap-4 bg-muted/40 p-4 sm:p-6">
+        {despatch.status === "Packed" && canEdit && (
+          <WhatsNext
+            actions={
+              <Button
+                size="sm"
+                disabled={isPending}
+                onClick={() => changeStatus("Despatched", "Marked as despatched.")}
+              >
+                Mark As Despatched
+              </Button>
+            }
+          >
+            Send the goods, then mark them as despatched. This takes them out of stock.
+          </WhatsNext>
+        )}
+        {despatch.status === "Despatched" && canEdit && (
+          <WhatsNext
+            actions={
+              <Button
+                size="sm"
+                disabled={isPending}
+                onClick={() => changeStatus("Delivered", "Marked as delivered.")}
+              >
+                Mark As Delivered
+              </Button>
+            }
+          >
+            When the customer has the goods, mark them as delivered.
+          </WhatsNext>
+        )}
         <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
           <ClipboardList className="size-4 shrink-0 text-primary" />
           <p>

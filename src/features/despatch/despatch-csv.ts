@@ -27,6 +27,7 @@ export const DESPATCH_CSV_COLUMNS = [
   "Item Name",
   "SKU",
   "Unit",
+  "Box Number",
   "Quantity",
 ] as const
 
@@ -41,6 +42,7 @@ const COLUMN_ALIASES: Partial<Record<Column, readonly string[]>> = {
   "Tracking Number": ["Tracking#", "LR Number", "LR / Tracking Number"],
   "Vehicle Number": ["Vehicle No"],
   Unit: ["Usage unit"],
+  "Box Number": ["Box No", "Box#", "Box"],
   Quantity: ["Quantity Packed", "Quantity Shipped"],
 }
 
@@ -49,6 +51,7 @@ const REQUIRED_COLUMNS = [
   "Despatch Date",
   "Sales Order Number",
   "Item Name",
+  "Box Number",
   "Quantity",
 ] as const
 
@@ -122,22 +125,29 @@ export function readDespatchCsv(content: string): CsvReadResult<DespatchImportRo
     }
 
     const lines: DespatchImportLine[] = []
+    const inBoxes = new Set<string>()
     let lineProblem = false
     for (const { row, record } of group.records) {
       const line = getter(record)
       const name = text(line("Item Name"))
+      const sku = text(line("SKU"))
+      const boxNumber = text(line("Box Number"))
       const quantity = parseAmount(line("Quantity"))
+      const inBox = `${normalize(sku ?? name ?? "")}:${normalize(boxNumber ?? "")}`
       const message = !name
         ? "Item Name is blank"
-        : Number.isNaN(quantity) || quantity <= 0
-          ? `Quantity "${line("Quantity")}" isn't above 0`
-          : null
+        : boxNumber && inBoxes.has(inBox)
+          ? `${name} is in box ${boxNumber} twice`
+          : Number.isNaN(quantity) || quantity <= 0
+            ? `Quantity "${line("Quantity")}" isn't above 0`
+            : null
       if (message || !name) {
         report(message ?? "Item Name is blank", row)
         lineProblem = true
         break
       }
-      lines.push({ row, name: name.slice(0, 200), sku: text(line("SKU")), quantity })
+      inBoxes.add(inBox)
+      lines.push({ row, name: name.slice(0, 200), sku, boxNumber, quantity })
     }
     if (lineProblem) continue
 
@@ -184,6 +194,7 @@ export function toDespatchCsvRows(
       "Item Name": line.name,
       SKU: line.item?.sku ?? "",
       Unit: line.unit ?? "",
+      "Box Number": line.box_number ?? "",
       Quantity: line.quantity,
     }
     return DESPATCH_CSV_COLUMNS.map((column) => values[column])

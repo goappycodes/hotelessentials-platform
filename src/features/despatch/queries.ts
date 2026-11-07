@@ -22,24 +22,45 @@ export async function getDespatchDocument(supabase: Client, despatchId: string) 
   const despatch = despatchResult.data
   if (!despatch) return null
 
+  // Box by box, the way the goods are packed: Box 2 comes before Box 10.
+  const lines = [...linesResult.data].sort((a, b) =>
+    (a.box_number ?? "").localeCompare(b.box_number ?? "", "en", { numeric: true })
+  )
+
   return {
     despatch,
-    ...(await getDocumentDetails(supabase, despatch.customer_id, companyResult.data, linesResult.data)),
+    ...(await getDocumentDetails(supabase, despatch.customer_id, companyResult.data, lines)),
   }
 }
 
 export type DespatchDocumentData = NonNullable<Awaited<ReturnType<typeof getDespatchDocument>>>
 
-// Orders that can be despatched: the Sales Order picker on a new despatch.
+// Orders that can be despatched: the Sales Order picker on a new despatch. Confirmed, with
+// something left to send. Packed despatches count, because those goods are already set aside.
 export async function getDespatchOrderOptions(supabase: Client) {
   const { data, error } = await supabase
     .from("sales_orders")
-    .select("id, so_number, customer_name, order_date")
+    .select(
+      "id, so_number, customer_name, order_date, lines:sales_order_items(quantity, allotted:despatch_items(quantity))"
+    )
     .eq("status", "Confirmed")
     .order("so_number", { ascending: false })
     .limit(MAX_ORDER_OPTIONS)
   if (error) throw new Error("Failed to load sales orders")
+
   return data
+    .filter((order) =>
+      order.lines.some(
+        (line) =>
+          line.quantity > line.allotted.reduce((total, entry) => total + entry.quantity, 0)
+      )
+    )
+    .map(({ id, so_number, customer_name, order_date }) => ({
+      id,
+      so_number,
+      customer_name,
+      order_date,
+    }))
 }
 
 export type DespatchOrderOption = Awaited<ReturnType<typeof getDespatchOrderOptions>>[number]

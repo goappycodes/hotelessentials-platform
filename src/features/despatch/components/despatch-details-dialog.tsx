@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { FieldGroup } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
+import { DESPATCH_HINTS } from "@/constants/despatch"
 import type { DespatchDocumentData } from "@/features/despatch/queries"
 import { scrollToFirstInvalid } from "@/lib/scroll-to-invalid"
 import { despatchDetailsSchema, type DespatchDetailsInput } from "@/lib/validations/despatch"
@@ -79,6 +80,7 @@ export function DespatchDetailsDialog({
                 name="date"
                 label="Despatch Date"
                 required
+                hint={DESPATCH_HINTS.date}
                 type="date"
               />
               <FormInputField
@@ -86,24 +88,28 @@ export function DespatchDetailsDialog({
                 name="transporter"
                 label="Transporter"
                 autoComplete="off"
+                hint={DESPATCH_HINTS.transporter}
               />
               <FormInputField
                 control={form.control}
                 name="trackingNumber"
                 label="LR / Tracking Number"
                 autoComplete="off"
+                hint={DESPATCH_HINTS.trackingNumber}
               />
               <FormInputField
                 control={form.control}
                 name="vehicleNumber"
                 label="Vehicle Number"
                 autoComplete="off"
+                hint={DESPATCH_HINTS.vehicleNumber}
               />
               <FormTextareaField
                 control={form.control}
                 name="notes"
                 label="Notes"
                 placeholder="Max. 500 characters"
+                hint={DESPATCH_HINTS.notes}
                 rows={3}
               />
             </FieldGroup>

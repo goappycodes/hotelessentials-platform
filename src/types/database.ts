@@ -366,6 +366,8 @@ export type Database = {
           name: string
           description: string | null
           unit: string | null
+          // Null on despatches saved before boxes were added.
+          box_number: string | null
           quantity: number
           // This line took stock out.
           deducts_stock: boolean
@@ -1018,7 +1020,7 @@ export type Database = {
           // { sales_order_id, despatch_date, status, transporter, tracking_number,
           //   vehicle_number, notes }, plus despatch_number on import
           despatch: Json
-          // [{ sales_order_item_id, quantity }]
+          // [{ sales_order_item_id, box_number, quantity }]: one row per box
           items: Json
         }
         Returns: string

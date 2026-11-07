@@ -59,6 +59,7 @@ export async function saveDespatch(
       .filter((line) => Number(line.quantity) > 0)
       .map((line) => ({
         sales_order_item_id: line.salesOrderItemId,
+        box_number: line.boxNumber,
         quantity: Number(line.quantity),
       })),
   })

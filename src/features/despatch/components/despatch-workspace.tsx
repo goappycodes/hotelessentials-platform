@@ -41,7 +41,13 @@ export type DespatchRow = Pick<
   | "transporter"
   | "tracking_number"
   | "status"
->
+> & {
+  // Empty on despatches saved before boxes were added.
+  boxes: string[]
+  sentItems: number
+  remainingItems: number
+  totalItems: number
+}
 
 // The Despatch page. Clicking a despatch opens it beside the list without leaving the page:
 // only the URL's ?despatch= changes (history.pushState), so Back and shared links work.

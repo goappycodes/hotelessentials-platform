@@ -16,13 +16,15 @@ export const despatchDetailsSchema = z.object({
 
 export type DespatchDetailsInput = z.infer<typeof despatchDetailsSchema>
 
-// Quantities are strings in the form. A line left empty or at 0 isn't part of the despatch.
+// One row per item and box, so an item can be split across boxes. Quantities are strings in
+// the form, and a row left empty or at 0 isn't part of the despatch.
 export const despatchSchema = despatchDetailsSchema
   .extend({
     salesOrderId: z.uuid(),
     lines: z.array(
       z.object({
         salesOrderItemId: z.uuid(),
+        boxNumber: optionalText(20, "Box number"),
         quantity: z
           .string()
           .trim()
@@ -36,6 +38,21 @@ export const despatchSchema = despatchDetailsSchema
     if (!despatch.lines.some((line) => Number(line.quantity) > 0)) {
       context.addIssue({ code: "custom", path: ["lines"], message: "Enter a quantity for at least one item." })
     }
+
+    const seen = new Set<string>()
+    despatch.lines.forEach((line, index) => {
+      if (!(Number(line.quantity) > 0)) return
+      const path = ["lines", index, "boxNumber"]
+      if (!line.boxNumber) {
+        context.addIssue({ code: "custom", path, message: "Enter a box number" })
+        return
+      }
+      const key = `${line.salesOrderItemId}:${line.boxNumber.toLowerCase()}`
+      if (seen.has(key)) {
+        context.addIssue({ code: "custom", path, message: "Already in this box" })
+      }
+      seen.add(key)
+    })
   })
 
 export type DespatchInput = z.infer<typeof despatchSchema>

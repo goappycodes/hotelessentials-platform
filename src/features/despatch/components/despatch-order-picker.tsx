@@ -53,7 +53,7 @@ export function DespatchOrderPicker({
         <Command>
           <CommandInput placeholder="Search by order number or customer" />
           <CommandList>
-            <CommandEmpty>No confirmed sales orders found.</CommandEmpty>
+            <CommandEmpty>No confirmed sales orders left to despatch.</CommandEmpty>
             <CommandGroup>
               {options.map((order) => (
                 <CommandItem

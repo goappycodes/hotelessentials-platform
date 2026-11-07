@@ -21,9 +21,10 @@ const RIBBON_CLASS: Record<string, string> = {
 // Column widths in points, in order; they add up to the page's 543.28pt.
 const COLUMNS = [
   { label: "S.No.", width: "32.5pt" },
+  { label: "Box No", width: "50pt" },
   { label: "Image", width: "76pt" },
   { label: "Code", width: "90pt" },
-  { label: "Name", width: "254.78pt" },
+  { label: "Name", width: "204.78pt" },
   { label: "Qty", width: "90pt" },
 ]
 
@@ -66,6 +67,7 @@ export function DespatchDocument({
     ["LR / Tracking No", despatch.tracking_number],
     ["Vehicle No", despatch.vehicle_number],
   ].filter((row): row is [string, string] => Boolean(row[1]))
+  const boxes = new Set(data.lines.flatMap((line) => (line.box_number ? [line.box_number] : [])))
 
   return (
     <article
@@ -97,7 +99,10 @@ export function DespatchDocument({
         title="Despatch Note"
         date={despatch.despatch_date}
         number={despatch.despatch_number}
-        details={[{ label: "Sales Order No", value: despatch.so_number }]}
+        details={[
+          { label: "Sales Order No", value: despatch.so_number },
+          ...(boxes.size > 0 ? [{ label: "Total Boxes", value: String(boxes.size) }] : []),
+        ]}
       />
 
       {transport.length > 0 && (
@@ -132,6 +137,7 @@ export function DespatchDocument({
             return (
               <tr key={line.id} className="break-inside-avoid">
                 <td className={CELL}>{index + 1}</td>
+                <td className={cn(CELL, "px-[2pt] font-bold break-words")}>{line.box_number}</td>
                 <td className={CELL}>
                   {line.imageUrl ? (
                     <img

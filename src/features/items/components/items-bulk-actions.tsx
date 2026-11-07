@@ -4,7 +4,12 @@ import { ChevronDown, X } from "lucide-react"
 import { useEffect, useState, useTransition } from "react"
 import { toast } from "sonner"
 
-import { deleteItems, setItemsActive, type BulkItemsResult } from "@/actions/items"
+import {
+  deleteItems,
+  setItemsActive,
+  trackItemsInventory,
+  type BulkItemsResult,
+} from "@/actions/items"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -136,6 +141,20 @@ export function ItemsBulkActions({
             }
           >
             Mark as Inactive
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isPending}
+            onClick={() =>
+              run(
+                () => trackItemsInventory(selectedIds),
+                (changed) =>
+                  `${changed} ${plural(changed)} now tracking inventory. Add their stock with an adjustment.`
+              )
+            }
+          >
+            Track Inventory
           </Button>
         </>
       )}
