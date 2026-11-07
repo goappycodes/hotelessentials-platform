@@ -175,14 +175,15 @@ async function signedUrls(supabase: Client, bucket: string, paths: string[]) {
 
 export type QuotationDocumentData = NonNullable<Awaited<ReturnType<typeof getQuotationDocument>>>
 
-// A quotation's attached files, with short-lived links that download them by name.
+// A quotation's attached files, with short-lived links: one that shows the file, and one
+// that downloads it by name.
 export async function getQuotationAttachments(
   supabase: Client,
   quotationId: string
 ): Promise<QuotationAttachmentView[]> {
   const { data, error } = await supabase
     .from("quotation_attachments")
-    .select("id, storage_path, file_name, file_size")
+    .select("id, storage_path, file_name, file_size, content_type")
     .eq("quotation_id", quotationId)
     .order("created_at")
   if (error) throw new Error("Failed to load the quotation's files")
@@ -192,13 +193,22 @@ export async function getQuotationAttachments(
     data.map((file) =>
       supabase.storage
         .from(QUOTATION_ATTACHMENTS_BUCKET)
-        .createSignedUrl(file.storage_path, SIGNED_URL_SECONDS, { download: file.file_name })
+        .createSignedUrl(file.storage_path, SIGNED_URL_SECONDS)
     )
   )
   return data.flatMap((file, index) => {
     const url = links[index].data?.signedUrl
     return url
-      ? [{ id: file.id, fileName: file.file_name, fileSize: file.file_size, url }]
+      ? [
+          {
+            id: file.id,
+            fileName: file.file_name,
+            fileSize: file.file_size,
+            contentType: file.content_type,
+            url,
+            downloadUrl: `${url}&download=${encodeURIComponent(file.file_name)}`,
+          },
+        ]
       : []
   })
 }

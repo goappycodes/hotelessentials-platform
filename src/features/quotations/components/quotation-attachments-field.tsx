@@ -14,6 +14,7 @@ import {
   QUOTATION_ATTACHMENT_TYPES,
   QUOTATION_ATTACHMENTS_BUCKET,
 } from "@/constants/quotations"
+import { AttachmentLink } from "@/features/quotations/components/attachment-viewer"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -21,7 +22,10 @@ export type QuotationAttachmentView = {
   id: string
   fileName: string
   fileSize: number | null
+  contentType: string | null
+  // Shows the file; the download link saves it by name.
   url: string
+  downloadUrl: string
 }
 
 export type PendingAttachment = { id: string; file: File }
@@ -148,7 +152,7 @@ export function QuotationAttachmentsField({
               key={file.id}
               name={file.fileName}
               size={formatSize(file.fileSize)}
-              href={file.url}
+              saved={file}
               isRemoving={isRemoving && removingId === file.id}
               onRemove={canRemove && !disabled ? () => removeExisting(file) : undefined}
             />
@@ -176,33 +180,30 @@ export function QuotationAttachmentsField({
 function FileRow({
   name,
   size,
-  href,
+  saved,
   isRemoving,
   onRemove,
 }: {
   name: string
   size: string
-  href?: string
+  // A file already uploaded, which can be opened.
+  saved?: QuotationAttachmentView
   isRemoving?: boolean
   onRemove?: () => void
 }) {
   return (
     <li className="flex items-center gap-2 rounded-lg border bg-background px-2.5 py-1.5 text-sm">
-      {href ? (
+      {saved ? (
         <Paperclip className="size-4 shrink-0 text-muted-foreground" />
       ) : (
         <FileText className="size-4 shrink-0 text-muted-foreground" />
       )}
       <span className="min-w-0 flex-1">
-        {href ? (
-          <a
-            href={href}
-            target="_blank"
-            rel="noreferrer"
-            className="block truncate text-primary hover:underline"
-          >
-            {name}
-          </a>
+        {saved ? (
+          <AttachmentLink
+            file={saved}
+            className="block max-w-full truncate text-left text-primary hover:underline"
+          />
         ) : (
           <span className="block truncate">{name}</span>
         )}

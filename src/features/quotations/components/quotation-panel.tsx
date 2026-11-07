@@ -38,6 +38,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { quotationEditRoute, quotationPrintRoute, salesOrderRoute } from "@/constants/routes"
+import { AttachmentLink } from "@/features/quotations/components/attachment-viewer"
 import { QuotationDocument } from "@/features/quotations/components/quotation-document"
 import { isQuotationExpired } from "@/features/quotations/components/quotation-status-badge"
 import { STATUS_ACTIONS } from "@/features/quotations/list-config"
@@ -201,12 +202,10 @@ function QuotationView({
               <ul className="flex flex-col">
                 {attachments.map((file) => (
                   <li key={file.id}>
-                    <a
-                      href={file.url}
-                      className="block truncate rounded-sm px-1 py-1.5 text-sm text-primary hover:bg-muted"
-                    >
-                      {file.fileName}
-                    </a>
+                    <AttachmentLink
+                      file={file}
+                      className="block w-full truncate rounded-sm px-1 py-1.5 text-left text-sm text-primary hover:bg-muted"
+                    />
                   </li>
                 ))}
               </ul>
