@@ -7,7 +7,10 @@ import {
   DashboardGreeting,
   DashboardGreetingSkeleton,
 } from "@/features/dashboard/components/dashboard-greeting"
-import { DashboardOverview } from "@/features/dashboard/components/dashboard-overview"
+import {
+  DashboardOverview,
+  DashboardOverviewSkeleton,
+} from "@/features/dashboard/components/dashboard-overview"
 
 export const metadata: Metadata = { title: DASHBOARD_NAV_ITEM.title }
 
@@ -20,7 +23,9 @@ export default function DashboardPage() {
         </Suspense>
       </div>
       <PageContainer>
-        <DashboardOverview />
+        <Suspense fallback={<DashboardOverviewSkeleton />}>
+          <DashboardOverview />
+        </Suspense>
       </PageContainer>
     </>
   )

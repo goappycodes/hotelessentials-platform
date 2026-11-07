@@ -1011,6 +1011,17 @@ export type Database = {
     }
     Functions: {
       // The number the next new quotation gets (null without quotations create access).
+      dashboard_monthly_sales: {
+        Args: { months?: number }
+        Returns: {
+          // The first of the month, oldest first.
+          month: string
+          quotation_count: number
+          quotation_total: number
+          order_count: number
+          order_total: number
+        }[]
+      }
       next_quote_number: {
         Args: Record<PropertyKey, never>
         Returns: string | null
